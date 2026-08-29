@@ -43,7 +43,7 @@ homepage dan bukan rute tersendiri.
 - npm workspaces + Turborepo; `node_modules` hanya di root
 - `apps/web` — Next.js 16.3.3, React 19.2.8, App Router, TypeScript, Tailwind 4, ESLint
 - `apps/api` — Express 5.2.1, TypeScript, tsx watch, helmet + cors, `GET /health`
-- Palet crest sebagai token CSS di `apps/web/src/app/globals.css`, dipetakan ke `@theme` Tailwind
+- Palet crest sebagai token CSS di `apps/web/app/globals.css`, dipetakan ke `@theme` Tailwind
 - Font: Inter + Geist Mono lewat `next/font` (self-host, bukan CDN Google)
 - `CLAUDE.md`, `MILESTONE.md`, `.env.example`, `.nvmrc`
 - git init + commit pertama. `prototypes/`, `secrets/`, `jangkar-coffee-reference/` di-ignore

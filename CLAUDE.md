@@ -35,7 +35,11 @@ docs/design/  dokumentasi fase 1–7, sumber kebenaran desain
 ```
 
 **Panel admin ada di dalam `apps/web`, bukan app terpisah.** Rencananya sebagai route group:
-`src/app/(site)/` untuk publik, `src/app/(admin)/admin/` untuk panel.
+`app/(site)/` untuk publik, `app/(admin)/admin/` untuk panel.
+
+`apps/web` memakai **struktur default Next.js: App Router, tanpa folder `src/`.** Route ada di
+`apps/web/app/`, dan alias `@/*` menunjuk ke akar app (`./*`), bukan `./src/*`. Jangan
+memperkenalkan `src/` atau `pages/`.
 
 ### Perintah
 
@@ -68,7 +72,7 @@ Arus adalah konsep **motion-first**: aurora, dock nav mengambang, split-text rev
 bento, tilt card, magnet button, click spark. Semuanya dibangun dari `./reactbits` dan
 `./lightswind` yang ditambahkan pemilik proyek.
 
-### Palet crest — token ada di `apps/web/src/app/globals.css`
+### Palet crest — token ada di `apps/web/app/globals.css`
 
 Nilai diambil dari piksel `jangkar-coffee-reference/logo-3.PNG`.
 **Token ini adalah peran, bukan warna harfiah** — di palet terang ini `--ink-900` justru warna
