@@ -19,7 +19,7 @@ import { healthRouter } from "./routes/health.js";
 export function createApp(): Express {
   const app = express();
 
-  // Vercel berjalan di belakang proxy — tanpa ini req.ip dan
+  // Vercel berjalan di belakang proxy, tanpa ini req.ip dan
   // req.protocol akan salah.
   app.set("trust proxy", 1);
 

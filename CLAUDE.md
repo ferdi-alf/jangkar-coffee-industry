@@ -1,7 +1,24 @@
 # Jangkar Coffee Industry
 
 Monorepo untuk situs Jangkar Coffee Industry. Ditulis untuk sesi mendatang yang belum punya
-konteks — baca ini sebelum menulis kode.
+konteks, baca ini sebelum menulis kode.
+
+> ## Status proyek: Tahap A
+>
+> Menunggu MCP **Higgsfield** dan **21st.dev** terdaftar. Periksa dengan `cat .mcp.json`.
+> Bila di sana hanya ada `supabase`, keduanya belum terhubung dan tidak ada generasi visual
+> yang bisa dijalankan. Tahap B (fondasi i18n, middleware, kerangka modul) boleh jalan
+> tanpa menunggu itu.
+>
+> **Spesifikasi lengkap ada di [`docs/PROJECT-SPEC.md`](docs/PROJECT-SPEC.md). Baca sebelum
+> menulis kode.** Di sana ada misi bertahap, aturan tetap, aturan produk yang ditetapkan
+> pemilik proyek, arsitektur per modul, contract API, aturan keamanan, skema basis data,
+> aturan dashboard, dan anggaran performa.
+>
+> Yang paling mudah dilanggar tanpa sadar, semuanya dijelaskan di dokumen itu:
+> tidak ada em dash di teks mana pun, ikon resmi bukan emoji, rute admin tanpa prefiks
+> `/admin`, aturan dialog dan drawer di admin, toast sonner di kiri atas, dan backup ke
+> `backups/` sebelum setiap perubahan begitu situs sudah ada.
 
 ---
 
@@ -16,7 +33,7 @@ kebun Semendo  →  roastery Sako  →  produk kemasan  →  outlet  →  armada
 
 Kata "Industry" pada namanya harfiah. Tiga dari delapan aset brand adalah **barang kemasan**,
 bukan minuman. Ini alasan struktur informasinya memisahkan `/menu` (yang dipesan di gerai) dari
-`/roastery` (yang dibeli dan dibawa pulang) — pemisahan itu rekomendasi IA yang paling substantif,
+`/roastery` (yang dibeli dan dibawa pulang), pemisahan itu rekomendasi IA yang paling substantif,
 dan sisanya mengikuti dari situ.
 
 Jangan pernah membuat situs ini terlihat seperti template kedai kopi. Itu kegagalan utama yang
@@ -30,7 +47,7 @@ dihindari seluruh fase desain.
 apps/
   web/    Next.js 16 · situs publik + panel admin   :3000
   api/    Express 5  · REST API                     :4000
-packages/ (belum ada — dibuat di M2)
+packages/ (belum ada, dibuat di M2)
 docs/design/  dokumentasi fase 1–7, sumber kebenaran desain
 ```
 
@@ -58,13 +75,29 @@ di root. Node 24 (`.nvmrc`).
 > tidak dideklarasikan bisa lolos di lokal lalu gagal di CI. Selalu deklarasikan apa yang dipakai
 > di `package.json` workspace-nya sendiri.
 
+
+### Komponen vendor berada di luar gerbang tipe
+
+`components/lightswind` dan `components/reactbits` dikeluarkan dari `exclude` pada
+`apps/web/tsconfig.json`. Alasannya, saat dipasang keduanya membawa **100 galat TypeScript** yang
+membuat `next build` gagal total, dan tidak satu pun berasal dari kode kita.
+
+Konsekuensi yang harus diingat: galat itu akan muncul kembali begitu sebuah komponen benar benar
+diimpor, karena TypeScript tetap memeriksa berkas yang tersentuh rantai impor. Perbaiki per
+komponen saat komponen itu diadopsi, jangan sekaligus. Ini berpasangan wajar dengan aturan
+menghapus komponen yang tidak terpakai di akhir proyek: yang tidak pernah diimpor tidak pernah
+perlu diperbaiki.
+
+Jangan mengganti ini dengan `typescript.ignoreBuildErrors`. Opsi itu mematikan pemeriksaan untuk
+seluruh proyek, termasuk kode kita sendiri.
+
 ---
 
 ## Desain terpilih
 
 Client memilih konsep **06 Arus** dengan palet **Cap Jangkar 999** (`crest`).
 
-Prototipe sumber: `prototypes/06-arus.html` — **di luar git repo ini** (repositori sendiri, lihat
+Prototipe sumber: `prototypes/06-arus.html`, **di luar git repo ini** (repositori sendiri, lihat
 di bawah). Homepage berupa satu halaman anchor-scroll dengan sembilan seksi; produksi memecahnya
 jadi tujuh rute.
 
@@ -72,10 +105,10 @@ Arus adalah konsep **motion-first**: aurora, dock nav mengambang, split-text rev
 bento, tilt card, magnet button, click spark. Semuanya dibangun dari `./reactbits` dan
 `./lightswind` yang ditambahkan pemilik proyek.
 
-### Palet crest — token ada di `apps/web/app/globals.css`
+### Palet crest: token ada di `apps/web/app/globals.css`
 
 Nilai diambil dari piksel `jangkar-coffee-reference/logo-3.PNG`.
-**Token ini adalah peran, bukan warna harfiah** — di palet terang ini `--ink-900` justru warna
+**Token ini adalah peran, bukan warna harfiah**, di palet terang ini `--ink-900` justru warna
 paling terang, dan `--red` berisi **gold**, bukan merah.
 
 | Token | Nilai | Peran |
@@ -86,15 +119,15 @@ paling terang, dan `--red` berisi **gold**, bukan merah.
 | `--ink-300` | `#7A4E44` | teks sekunder |
 | `--ink-200` | `#5A2E24` | teks muted |
 | `--paper` | `#320505` | teks utama (maroon crest) |
-| `--red` | `#B08A16` | **aksen** — fill, rule, band |
+| `--red` | `#B08A16` | **aksen**, fill, rule, band |
 | `--red-lift` | `#8A6C10` | aksen teks kecil |
 | `--red-deep` | `#E8C244` | fill hover (lebih terang) |
 | `--on-red` | `#320505` | fg di atas panel aksen |
-| `--signal` | `#6B2218` | merah harfiah — punctuation & focus ring |
+| `--signal` | `#6B2218` | merah harfiah, punctuation & focus ring |
 
 Dua hal yang dipaksa oleh warna aslinya, jangan "diperbaiki":
 
-- **Gold crest asli `#F9DA72` hanya 1.4:1 di atas putih** — mustahil untuk fill atau teks. Karena
+- **Gold crest asli `#F9DA72` hanya 1.4:1 di atas putih**, mustahil untuk fill atau teks. Karena
   itu gold antik `#B08A16` memegang fill/UI (3.10:1), dan gold cerah `#E8C244` jadi `--red-deep`.
 - **Putih di atas gold hanya 3.3:1.** Fg di panel aksen adalah maroon `--on-red`, bukan putih.
   Jangan tulis `color: white` di atas `--red`.
@@ -106,14 +139,14 @@ Dua hal yang dipaksa oleh warna aslinya, jangan "diperbaiki":
 ### Tipografi
 
 - **Tidak ada font serif.** Inter (sans) + Geist Mono. Konsep Arus aslinya memakai JetBrains Mono,
-  tapi font itu punya serif kecil pada beberapa glif — sudah diganti Geist Mono.
+  tapi font itu punya serif kecil pada beberapa glif, sudah diganti Geist Mono.
 - **Ketebalan selalu dinyatakan eksplisit.** Jangan mengandalkan default browser atau default
   komponen. Display Arus = 800 dengan tracking negatif rapat; body = 400.
 
-### Performa — ini menentukan, bukan preferensi
+### Performa: ini menentukan, bukan preferensi
 
 - **Tolak background WebGL dari reactbits.** Sebagian komponennya render lewat OGL/Three.js:
-  bundle berat dan beban GPU terus-menerus. Trafik Indonesia didominasi Android kelas menengah —
+  bundle berat dan beban GPU terus-menerus. Trafik Indonesia didominasi Android kelas menengah,
   artinya baterai terkuras, thermal throttling, dan LCP lambat. Aurora di prototipe sengaja
   **CSS murni**. Pertahankan. Ini risiko nomor satu konsep Arus dan sudah dicatat sejak awal.
 - Target: **LCP < 2.5s di 4G, CLS < 0.1, INP < 200ms.** Uji di lebar **360px**.
@@ -124,7 +157,7 @@ Dua hal yang dipaksa oleh warna aslinya, jangan "diperbaiki":
 
 - Body ≥ **4.5:1**, teks besar & UI ≥ **3:1**.
 - `prefers-reduced-motion: reduce` **wajib** mendegradasi ke halaman statis bersih. Prototipe
-  sudah melakukannya sepenuhnya; ini biasanya hal pertama yang hilang di produksi — jangan.
+  sudah melakukannya sepenuhnya; ini biasanya hal pertama yang hilang di produksi, jangan.
 - **Warna tidak pernah jadi satu-satunya pembawa makna.** Item habis dicoret **dan** dilabeli,
   bukan sekadar diredupkan.
 - Focus selalu terlihat: `2px solid var(--signal)`. Jangan `outline: none`.
@@ -133,7 +166,7 @@ Dua hal yang dipaksa oleh warna aslinya, jangan "diperbaiki":
 ### Penyimpangan sistem yang disengaja
 
 Arus melanggar dua aturan `docs/design/design-system.md`: `radius: 0` (§5) dan budget motion
-"dua benda bergerak per layar" (§6). Keduanya **sengaja** — tapi sudah dicatat bahwa sistemnya
+"dua benda bergerak per layar" (§6). Keduanya **sengaja**, tapi sudah dicatat bahwa sistemnya
 harus **diamandemen formal**, bukan diabaikan diam-diam. Kalau menyentuh dokumen itu, perbarui
 §5 dan §6 sekalian.
 
@@ -161,7 +194,7 @@ dari komponen-komponen itu.
 
 ## Data & rahasia
 
-**Supabase** — project ref `fylxkwqwuaidbfpmdwhu`. Saat M0 ditulis: kosong total, nol tabel
+**Supabase**, project ref `fylxkwqwuaidbfpmdwhu`. Saat M0 ditulis: kosong total, nol tabel
 `public`, nol migrasi, nol bucket.
 
 Aturan dari `secrets/ACCESS.md`:
@@ -171,7 +204,7 @@ Aturan dari `secrets/ACCESS.md`:
 - Prioritaskan read-only; menulis hanya dengan persetujuan eksplisit.
 - Jangan membuat migrasi tanpa review.
 
-`sb_secret_…` adalah key **rahasia** — tidak boleh menyentuh browser, tidak boleh diberi prefix
+`sb_secret_…` adalah key **rahasia**, tidak boleh menyentuh browser, tidak boleh diberi prefix
 `NEXT_PUBLIC_`. Yang boleh ke browser hanya key *publishable*.
 
 ### Tiga folder di luar git
@@ -180,17 +213,17 @@ Aturan dari `secrets/ACCESS.md`:
 
 | Folder | Alasan |
 |---|---|
-| `prototypes/` | repositori git tersendiri dengan remote sendiri — jangan di-commit ke sini |
+| `prototypes/` | repositori git tersendiri dengan remote sendiri, jangan di-commit ke sini |
 | `secrets/` | memuat kredensial |
 | `jangkar-coffee-reference/` | aset sumber mentah (~9MB) |
 
-Ketiganya tetap ada di disk dan boleh dibaca sebagai referensi — hanya tidak dilacak git.
+Ketiganya tetap ada di disk dan boleh dibaca sebagai referensi, hanya tidak dilacak git.
 
 ---
 
 ## Dokumen desain
 
-`docs/design/` adalah sumber kebenaran, dan isinya **beropini** — baca alasannya, bukan cuma
+`docs/design/` adalah sumber kebenaran, dan isinya **beropini**, baca alasannya, bukan cuma
 kesimpulannya.
 
 | File | Isi |
@@ -202,4 +235,4 @@ kesimpulannya.
 | `design-comparison.md` | Keenam konsep dibandingkan; §06 memuat peringatan Arus |
 
 Catatan: `future-scope.md` §9 mengusulkan `web` + `admin` sebagai dua app tanpa Express. Repo ini
-menyimpang — satu app Next.js (publik + admin) plus API Express. Dokumen belum diperbarui.
+menyimpang, satu app Next.js (publik + admin) plus API Express. Dokumen belum diperbarui.

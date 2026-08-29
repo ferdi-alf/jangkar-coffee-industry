@@ -5,7 +5,7 @@
  * vercel.json me-rewrite SEMUA path ke sini, jadi routing tetap dipegang
  * Express, bukan dipecah jadi banyak function.
  *
- * Tidak ada listen() di sini — hanya mengekspor app.
+ * Tidak ada listen() di sini, hanya mengekspor app.
  */
 import { createApp } from "../src/app.js";
 

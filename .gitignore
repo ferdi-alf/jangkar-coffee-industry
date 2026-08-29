@@ -30,6 +30,11 @@ prototypes/
 secrets/
 jangkar-coffee-reference/
 
+# ── backup situs ───────────────────────────────────────────────
+# Aturan tetap proyek: backup sebelum setiap perubahan, ke subfolder
+# bertanda waktu. Jangan pernah dilacak git, riwayat akan membengkak.
+backups/
+
 # ── logs & cache ───────────────────────────────────────────────
 *.log
 npm-debug.log*

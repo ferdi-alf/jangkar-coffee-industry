@@ -1,5 +1,5 @@
 /**
- * Placeholder. Homepage sebenarnya adalah port konsep 06 Arus — sembilan
+ * Placeholder. Homepage sebenarnya adalah port konsep 06 Arus, sembilan
  * seksi, lihat MILESTONE.md M4. Belum dikerjakan: menunggu komponen
  * ./reactbits dan ./lightswind ditambahkan pemilik proyek (M1).
  */
@@ -47,7 +47,7 @@ export default function Home() {
         }}
       >
         Monorepo siap. Desain konsep <strong style={{ fontWeight: 600 }}>06 Arus</strong> dengan
-        palet <strong style={{ fontWeight: 600 }}>Cap Jangkar 999</strong> belum diport — lihat{" "}
+        palet <strong style={{ fontWeight: 600 }}>Cap Jangkar 999</strong> belum diport, lihat{" "}
         <code style={{ fontFamily: "var(--font-mono)", color: "var(--red-lift)" }}>
           MILESTONE.md
         </code>

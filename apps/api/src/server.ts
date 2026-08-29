@@ -1,6 +1,6 @@
 /**
  * Entry point untuk pengembangan lokal.
- * Satu-satunya tempat listen() dipanggil — lihat catatan di src/app.ts.
+ * Satu-satunya tempat listen() dipanggil, lihat catatan di src/app.ts.
  */
 import "dotenv/config";
 
