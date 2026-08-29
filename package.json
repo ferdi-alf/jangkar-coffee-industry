@@ -1,0 +1,25 @@
+{
+  "name": "jangkar-coffee-industry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo Jangkar Coffee Industry — situs utama, panel admin, dan API",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules .turbo"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.12"
+  }
+}

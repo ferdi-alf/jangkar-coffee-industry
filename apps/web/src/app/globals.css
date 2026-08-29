@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PALET — Cap Jangkar 999 (`crest`)
+   Dipilih client bersama konsep desain 06 Arus.
+   Nilai diambil dari piksel jangkar-coffee-reference/logo-3.PNG.
+
+   TOKEN INI ADALAH PERAN, BUKAN WARNA HARFIAH:
+     --ink-900 … --ink-700   ground & permukaan (paling TERANG di palet ini)
+     --ink-600 … --ink-400   border & dekoratif; --ink-400 dekoratif saja
+     --ink-300 / --ink-200   teks sekunder & muted
+     --paper                 teks utama (GELAP — maroon crest)
+     --red / -lift / -deep   keluarga AKSEN; di palet ini berisi GOLD
+     --red-deep              fill hover; lebih TERANG, selalu bawa --on-red
+     --on-red                fg di atas panel aksen (maroon, bukan putih)
+     --signal                merah harfiah — punctuation & focus ring
+
+   Gold crest asli #F9DA72 hanya 1.4:1 di atas putih — mustahil untuk fill
+   atau teks. Karena itu gold antik #B08A16 memegang fill/UI (3.10:1) dan
+   gold cerah #E8C244 jadi --red-deep, hover yang tetap membawa teks maroon.
+   Putih di atas gold hanya 3.3:1 — itu sebabnya --on-red ada.
+
+   Verifikasi kontras (vs --ink-900, kecuali disebut lain):
+     paper 17.36  ·  ink-200 10.88  ·  ink-300 6.71  ·  red 3.10
+     red-lift 4.76  ·  signal 10.78  ·  on-red/red 5.60  ·  on-red/deep 10.55
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --ink-900: #FBFAF8;
+  --ink-850: #F2EDEA;
+  --ink-800: #FCFAF9;
+  --ink-700: #FFFFFF;
+  --ink-600: #E4D9D5;
+  --ink-500: #CFBDB8;
+  --ink-400: #9C7A72;
+  --ink-300: #7A4E44;
+  --ink-200: #5A2E24;
+  --paper: #320505;
+  --paper-lift: #4A1210;
+  --white: #FFFFFF;
+
+  --red: #B08A16;
+  --red-lift: #8A6C10;
+  --red-deep: #E8C244;
+  --red-shine: #6B5309;
+  --on-red: #320505;
+  --signal: #6B2218;
+
+  --veil: rgba(251, 250, 248, 0.88);
+  --chip-bg: rgba(251, 250, 248, 0.8);
+  --chip-bd: rgba(50, 5, 5, 0.26);
+  --shadow: rgba(50, 5, 5, 0.24);
+  --blend: multiply;
+
+  /* triplet untuk rgba(var(--x-rgb), α) */
+  --ink-900-rgb: 251, 250, 248;
+  --paper-rgb: 50, 5, 5;
+  --red-rgb: 176, 138, 22;
+  --red-lift-rgb: 138, 108, 16;
+  --red-deep-rgb: 232, 194, 68;
+  --on-red-rgb: 50, 5, 5;
+
+  /* struktur & motion — dari prototipe 06 Arus */
+  --max: 1320px;
+  --margin: clamp(20px, 4.5vw, 64px);
+  --e: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@theme inline {
+  --color-ink-900: var(--ink-900);
+  --color-ink-850: var(--ink-850);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+  --color-ink-200: var(--ink-200);
+  --color-paper: var(--paper);
+  --color-paper-lift: var(--paper-lift);
+  --color-accent: var(--red);
+  --color-accent-lift: var(--red-lift);
+  --color-accent-deep: var(--red-deep);
+  --color-on-accent: var(--on-red);
+  --color-signal: var(--signal);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--ink-900);
+  color: var(--paper);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  /* Ketebalan selalu dinyatakan eksplisit, tidak pernah diserahkan ke
+     default browser. Lihat CLAUDE.md — aturan tipografi. */
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+/* Wajib bertahan sampai produksi — konsep Arus melanggar budget motion
+   design-system.md §6 dengan sengaja, dan ini kompensasinya. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

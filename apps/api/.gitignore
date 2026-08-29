@@ -1,0 +1,7 @@
+dist/
+.turbo/
+node_modules/
+.env
+.env.*
+!.env.example
+.vercel/

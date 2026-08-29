@@ -1,0 +1,44 @@
+# ── dependencies ───────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.*
+
+# ── build output ───────────────────────────────────────────────
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── turborepo ──────────────────────────────────────────────────
+.turbo/
+
+# ── environment ────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── deployment ─────────────────────────────────────────────────
+.vercel/
+
+# ── di luar monorepo (lihat CLAUDE.md) ─────────────────────────
+# prototypes/ adalah repositori git tersendiri dengan remote sendiri.
+# secrets/ memuat kredensial dan tidak boleh ter-commit, selamanya.
+# jangkar-coffee-reference/ adalah aset sumber mentah (~9MB).
+prototypes/
+secrets/
+jangkar-coffee-reference/
+
+# ── logs & cache ───────────────────────────────────────────────
+*.log
+npm-debug.log*
+.eslintcache
+.cache/
+
+# ── editor & os ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
