@@ -68,33 +68,35 @@ Node 24 adalah default di Vercel dan `package.json` sudah memakunya di `engines.
 
 Buat proyek Vercel baru dari repositori ini.
 
-| Pengaturan | Nilai |
-|---|---|
-| Project Name | `jangkar-api` |
-| Root Directory | `apps/api` |
+| Pengaturan                           | Nilai                                     |
+| ------------------------------------ | ----------------------------------------- |
+| Project Name                         | `jangkar-api`                             |
+| Root Directory                       | `apps/api`                                |
 | Include files outside Root Directory | **nyalakan**, ini monorepo npm workspaces |
-| Framework Preset | Other |
-| Build Command | `npm run build` |
-| Output Directory | kosongkan |
-| Install Command | kosongkan, biarkan bawaan |
+| Framework Preset                     | Other                                     |
+| Build Command                        | `npm run build`                           |
+| Output Directory                     | kosongkan                                 |
+| Install Command                      | otomatis dari `apps/api/vercel.json`      |
 
 Build Command sengaja diisi meski Vercel mengkompilasi `api/index.ts` sendiri. `tsc` yang dijalankan
 di sana membuat galat tipe menggagalkan deploy, bukan menunggu sampai ada yang menemukannya di
-produksi.
+produksi. `apps/api/vercel.json` memaksa `npm install --include=dev` karena compiler dan declaration
+files TypeScript berada di `devDependencies`; tanpa itu, environment `NODE_ENV=production` Vercel
+membuang tipe Node, Express, dan middleware sebelum build.
 
 ### Environment Variables proyek API
 
 Isi untuk **Production** dan **Preview**.
 
-| Nama | Nilai | Catatan |
-|---|---|---|
-| `SUPABASE_URL` | `https://fylxkwqwuaidbfpmdwhu.supabase.co` | |
-| `SUPABASE_SECRET_KEY` | dari `secrets/ACCESS.md` | **rahasia**, jangan pernah berprefiks `NEXT_PUBLIC_` |
-| `SUPABASE_MEDIA_BUCKET` | `public-media` | |
-| `NODE_ENV` | `production` | menyalakan cookie `Secure` dan menyembunyikan pesan galat asli |
-| `CONTACT_IP_SALT` | string acak panjang, baru | jangan pakai yang di `.env` lokal |
-| `CORS_ORIGINS` | URL proyek web | pagar cadangan, peramban tidak memakainya |
-| `COOKIE_DOMAIN` | **kosongkan** | lihat peringatan di bawah |
+| Nama                    | Nilai                                      | Catatan                                                        |
+| ----------------------- | ------------------------------------------ | -------------------------------------------------------------- |
+| `SUPABASE_URL`          | `https://fylxkwqwuaidbfpmdwhu.supabase.co` |                                                                |
+| `SUPABASE_SECRET_KEY`   | dari `secrets/ACCESS.md`                   | **rahasia**, jangan pernah berprefiks `NEXT_PUBLIC_`           |
+| `SUPABASE_MEDIA_BUCKET` | `public-media`                             |                                                                |
+| `NODE_ENV`              | `production`                               | menyalakan cookie `Secure` dan menyembunyikan pesan galat asli |
+| `CONTACT_IP_SALT`       | string acak panjang, baru                  | jangan pakai yang di `.env` lokal                              |
+| `CORS_ORIGINS`          | URL proyek web                             | pagar cadangan, peramban tidak memakainya                      |
+| `COOKIE_DOMAIN`         | **kosongkan**                              | lihat peringatan di bawah                                      |
 
 > **`COOKIE_DOMAIN` harus kosong.** Cookie dipasang lewat proksi, jadi peramban sudah menyimpannya
 > untuk origin situs tanpa perlu diberi tahu. Mengisinya justru menyebarkan cookie sesi admin ke
@@ -144,21 +146,21 @@ Setelah berhasil masuk, **ganti kata sandinya lalu hapus `ADMIN_BOOTSTRAP_PASSWO
 
 Buat proyek Vercel kedua dari repositori yang sama.
 
-| Pengaturan | Nilai |
-|---|---|
-| Project Name | `jangkar-web` |
-| Root Directory | `apps/web` |
-| Include files outside Root Directory | **nyalakan** |
-| Framework Preset | Next.js |
-| Build Command | kosongkan, bawaan Next.js |
-| Output Directory | kosongkan |
+| Pengaturan                           | Nilai                     |
+| ------------------------------------ | ------------------------- |
+| Project Name                         | `jangkar-web`             |
+| Root Directory                       | `apps/web`                |
+| Include files outside Root Directory | **nyalakan**              |
+| Framework Preset                     | Next.js                   |
+| Build Command                        | kosongkan, bawaan Next.js |
+| Output Directory                     | kosongkan                 |
 
 ### Environment Variables proyek Web
 
-| Nama | Nilai | Catatan |
-|---|---|---|
-| `API_ORIGIN` | URL proyek API, misalnya `https://jangkar-api.vercel.app` | **tanpa** garis miring di akhir, **tanpa** prefiks `NEXT_PUBLIC_` |
-| `NEXT_PUBLIC_SITE_URL` | URL publik situs | dipakai `metadataBase` untuk Open Graph |
+| Nama                   | Nilai                                                     | Catatan                                                           |
+| ---------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
+| `API_ORIGIN`           | URL proyek API, misalnya `https://jangkar-api.vercel.app` | **tanpa** garis miring di akhir, **tanpa** prefiks `NEXT_PUBLIC_` |
+| `NEXT_PUBLIC_SITE_URL` | URL publik situs                                          | dipakai `metadataBase` untuk Open Graph                           |
 
 Hanya dua. Proyek web **tidak boleh** punya satu pun kredensial Supabase: ia tidak pernah menyentuh
 basis data secara langsung.
