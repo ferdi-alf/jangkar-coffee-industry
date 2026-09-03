@@ -1,0 +1,789 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   PANEL ADMIN
+
+   Berkas TERPISAH dari globals.css, dan itu keputusan performa, bukan kerapian.
+   Situs publik punya anggaran LCP di bawah 2.5 detik pada 4G di 360px, dan
+   sebagian besar pengunjungnya tidak akan pernah membuka panel. Menaruh gaya
+   panel di globals.css berarti setiap pengunjung mengunduh CSS dashboard yang
+   tidak pernah dipakainya. Berkas ini hanya diimpor app/(admin)/layout.tsx.
+
+   PALET: permukaan netral, aksen crest. Pilihan pemilik proyek.
+   Ground dan kartu memakai skala abu netral supaya tabel padat dan grafik tetap
+   nyaman dibaca berjam-jam, sementara gold crest dipakai hanya untuk aksi utama,
+   tautan aktif, dan seri grafik. Sidebar tetap maroon gelap supaya mark Jangkar
+   punya rumah dan alat kerja ini tetap terasa milik brand yang sama.
+
+   Seluruhnya dicakup di bawah [data-admin], jadi tidak ada satu pun aturan di
+   sini yang bisa menggeser situs publik.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+[data-admin] {
+  /* Permukaan netral. Kontras terukur di atas --a-surface putih:
+       --a-text    #1B1D21   16.4 : 1
+       --a-text-2  #5A6069    6.34 : 1
+       --a-text-3  #6E757F    4.65 : 1
+     Ketiganya lulus lantai 4.5:1 untuk teks isi. Nada #868D97 yang lebih terang
+     sempat dipakai untuk --a-text-3 lalu dibuang: ia hanya 3.35:1, cukup untuk
+     UI tapi gagal untuk teks, dan label tabel adalah teks. */
+  --a-bg: #F3F4F6;
+  --a-surface: #FFFFFF;
+  --a-surface-2: #FAFAFB;
+  --a-line: #E4E6EA;
+  --a-line-strong: #CBD0D8;
+  --a-text: #1B1D21;
+  --a-text-2: #5A6069;
+  --a-text-3: #6E757F;
+
+  /* Aksen crest. Gold antik yang sama dengan situs publik, dan aturan warna
+     depannya juga sama: di atas gold selalu maroon, tidak pernah putih.
+     Terukur 5.60:1 untuk --on-red di atas --a-accent. */
+  --a-accent: #B08A16;
+  --a-accent-hover: #96760F;
+  --a-on-accent: #320505;
+  --a-accent-soft: rgba(176, 138, 22, 0.12);
+  --a-accent-line: rgba(176, 138, 22, 0.4);
+
+  --a-sidebar: #241012;
+  --a-sidebar-2: #2E1618;
+  --a-sidebar-text: #E8E6E4;
+  --a-sidebar-muted: #B29B98;
+
+  --a-danger: #A3231C;
+  --a-danger-soft: rgba(163, 35, 28, 0.1);
+  --a-ok: #17663F;
+  --a-ok-soft: rgba(23, 102, 63, 0.1);
+  --a-warn: #8A5A05;
+  --a-warn-soft: rgba(138, 90, 5, 0.12);
+
+  --a-radius: 12px;
+  --a-radius-sm: 8px;
+  --a-shadow: 0 1px 2px rgba(16, 18, 22, 0.06), 0 8px 24px -12px rgba(16, 18, 22, 0.18);
+  --a-e: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Tinggi tetap untuk kartu dan tabel sebaris. Aturan dashboard di
+     PROJECT-SPEC: kartu dan tabel dalam satu baris memakai tinggi tetap yang
+     sama, ISINYA yang menggulung di dalam, bukan kontainernya yang memanjang.
+     Ditegakkan variabel ini, bukan diingat manusia tiap kali. */
+  --a-row-h: 420px;
+  --a-row-h-sm: 260px;
+
+  background: var(--a-bg);
+  color: var(--a-text);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 400;
+}
+
+[data-admin] *,
+[data-admin] *::before,
+[data-admin] *::after {
+  box-sizing: border-box;
+}
+
+[data-admin] :focus-visible {
+  outline: 2px solid var(--a-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── kerangka ────────────────────────────────────────────────────────────── */
+.adm-shell {
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100dvh;
+}
+@media (max-width: 1023px) {
+  .adm-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.adm-side {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 12px;
+  background: var(--a-sidebar);
+  color: var(--a-sidebar-text);
+  overflow-y: auto;
+}
+@media (max-width: 1023px) {
+  .adm-side {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: 264px;
+    z-index: 60;
+    transform: translateX(-100%);
+    transition: transform 280ms var(--a-e);
+  }
+  .adm-side[data-open="true"] {
+    transform: none;
+  }
+  .adm-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(16, 8, 9, 0.5);
+  }
+}
+
+.adm-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 16px;
+  color: inherit;
+  text-decoration: none;
+}
+.adm-brand .brand-mark {
+  width: 26px;
+  height: 26px;
+}
+.adm-brand-name {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.adm-brand-sub {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--a-sidebar-muted);
+}
+
+.adm-nav-label {
+  margin: 14px 10px 6px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--a-sidebar-muted);
+}
+.adm-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* 44px, lantai sasaran sentuh. */
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: var(--a-radius-sm);
+  color: var(--a-sidebar-text);
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 180ms var(--a-e);
+}
+.adm-nav-item:hover {
+  background: var(--a-sidebar-2);
+}
+/* Halaman aktif dibawa TIGA penanda, bukan warna saja: latar, garis emas di
+   tepi kiri, dan aria-current pada elemennya. */
+.adm-nav-item[aria-current="page"] {
+  background: var(--a-sidebar-2);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--a-accent);
+}
+.adm-nav-item svg {
+  flex: none;
+  color: var(--a-sidebar-muted);
+}
+.adm-nav-item[aria-current="page"] svg {
+  color: var(--a-accent);
+}
+
+.adm-side-foot {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--a-sidebar-2);
+}
+.adm-user {
+  padding: 8px 10px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.adm-user b {
+  display: block;
+  font-weight: 600;
+}
+.adm-user span {
+  color: var(--a-sidebar-muted);
+  font-size: 0.72rem;
+}
+
+.adm-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.adm-top {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px clamp(16px, 3vw, 28px);
+  background: rgba(243, 244, 246, 0.86);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--a-line);
+}
+.adm-top h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.adm-top-sub {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--a-text-2);
+}
+.adm-top-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.adm-burger {
+  display: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid var(--a-line);
+  border-radius: var(--a-radius-sm);
+  background: var(--a-surface);
+  color: var(--a-text);
+  cursor: pointer;
+}
+@media (max-width: 1023px) {
+  .adm-burger {
+    display: grid;
+  }
+}
+
+.adm-body {
+  padding: clamp(16px, 3vw, 28px);
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+/* ── baris grid dengan lebar bervariasi ──────────────────────────────────── */
+.adm-row {
+  display: grid;
+  gap: 16px;
+}
+.adm-row[data-split="1"] { grid-template-columns: minmax(0, 1fr); }
+.adm-row[data-split="30-70"] { grid-template-columns: minmax(0, 3fr) minmax(0, 7fr); }
+.adm-row[data-split="50-50"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.adm-row[data-split="stat"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) {
+  .adm-row[data-split="30-70"],
+  .adm-row[data-split="50-50"] { grid-template-columns: minmax(0, 1fr); }
+  .adm-row[data-split="stat"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .adm-row[data-split="stat"] { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── kartu ───────────────────────────────────────────────────────────────── */
+.adm-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--a-line);
+  border-radius: var(--a-radius);
+  background: var(--a-surface);
+  box-shadow: var(--a-shadow);
+  overflow: hidden;
+}
+/* Tinggi dikunci di sini, dan isinya yang menggulung. Inilah aturan grid
+   dashboard yang ditegakkan komponen. */
+.adm-card[data-fixed="true"] { height: var(--a-row-h); }
+.adm-card[data-fixed="sm"] { height: var(--a-row-h-sm); }
+/* MENGISI SISA LAYAR, untuk tabel yang jadi SATU-SATUNYA isi halaman.
+   Aturan tinggi tetap di PROJECT-SPEC ada supaya kartu dan tabel SEBARIS tidak
+   saling melebihi. Di halaman yang hanya berisi satu tabel, aturan itu tidak
+   punya tetangga untuk disamakan, dan mengunci 420px justru menyembunyikan 16
+   dari 20 baris sambil mengosongkan setengah layar. Terlihat di screenshot.
+   Angka 132px adalah tinggi topbar ditambah padding atas dan bawah body. */
+.adm-card[data-fixed="fill"] {
+  height: calc(100dvh - 132px);
+  min-height: 320px;
+}
+
+.adm-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--a-line);
+}
+.adm-card-head h2,
+.adm-card-head h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.adm-card-head p {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: var(--a-text-2);
+}
+.adm-card-actions { margin-left: auto; display: flex; gap: 8px; }
+.adm-card-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 16px;
+}
+.adm-card-body[data-flush="true"] { padding: 0; }
+
+/* ── kartu statistik ─────────────────────────────────────────────────────── */
+.adm-stat {
+  padding: 16px;
+}
+.adm-stat-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--a-text-2);
+}
+.adm-stat-label svg { color: var(--a-accent); }
+.adm-stat-value {
+  margin-top: 8px;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.adm-stat-note {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--a-text-3);
+}
+
+/* ── tombol ──────────────────────────────────────────────────────────────── */
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  /* 40px di desktop, dinaikkan ke 44px di layar sentuh lewat aturan di bawah. */
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--a-line-strong);
+  border-radius: var(--a-radius-sm);
+  background: var(--a-surface);
+  color: var(--a-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 160ms var(--a-e), border-color 160ms var(--a-e);
+}
+.adm-btn:hover { background: var(--a-surface-2); }
+.adm-btn[data-variant="primary"] {
+  background: var(--a-accent);
+  border-color: var(--a-accent);
+  color: var(--a-on-accent);
+}
+.adm-btn[data-variant="primary"]:hover { background: var(--a-accent-hover); }
+.adm-btn[data-variant="danger"] {
+  background: var(--a-danger);
+  border-color: var(--a-danger);
+  color: #FFFFFF;
+}
+.adm-btn[data-variant="ghost"] {
+  border-color: transparent;
+  background: transparent;
+}
+.adm-btn[data-variant="ghost"]:hover { background: var(--a-accent-soft); }
+.adm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.adm-btn[data-icon="true"] { width: 40px; padding: 0; }
+@media (pointer: coarse) {
+  .adm-btn { min-height: 44px; }
+  .adm-btn[data-icon="true"] { width: 44px; }
+}
+
+/* ── medan formulir ──────────────────────────────────────────────────────── */
+.adm-field { display: grid; gap: 6px; margin-bottom: 14px; }
+.adm-field > label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--a-text);
+}
+.adm-hint { font-size: 0.72rem; color: var(--a-text-3); }
+.adm-input,
+.adm-textarea,
+.adm-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--a-line-strong);
+  border-radius: var(--a-radius-sm);
+  background: var(--a-surface);
+  color: var(--a-text);
+  font: inherit;
+  font-size: 0.86rem;
+}
+.adm-textarea { min-height: 108px; resize: vertical; line-height: 1.55; }
+.adm-input:focus-visible,
+.adm-textarea:focus-visible,
+.adm-select:focus-visible { border-color: var(--a-accent); }
+.adm-input[aria-invalid="true"],
+.adm-textarea[aria-invalid="true"] { border-color: var(--a-danger); }
+/* Galat dibawa TEKS, bukan sekadar bingkai merah. Warna tidak pernah jadi
+   satu-satunya pembawa makna. */
+.adm-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--a-danger);
+}
+.adm-row-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 640px) { .adm-row-2 { grid-template-columns: minmax(0, 1fr); } }
+
+/* Input kata sandi selalu punya ikon mata. Aturan produk. */
+.adm-password { position: relative; }
+.adm-password .adm-input { padding-right: 46px; }
+.adm-password button {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: var(--a-radius-sm);
+  background: transparent;
+  color: var(--a-text-2);
+  cursor: pointer;
+}
+.adm-password button:hover { background: var(--a-accent-soft); }
+
+/* Input berkas selalu drag and drop, kontainer bergaris putus putus, ikon
+   berkas di tengah, jenis dan ukuran maksimum tertulis. Aturan produk. */
+.adm-drop {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 26px 18px;
+  border: 2px dashed var(--a-line-strong);
+  border-radius: var(--a-radius);
+  background: var(--a-surface-2);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 160ms var(--a-e), background 160ms var(--a-e);
+}
+.adm-drop[data-over="true"] {
+  border-color: var(--a-accent);
+  background: var(--a-accent-soft);
+}
+.adm-drop svg { color: var(--a-text-3); }
+.adm-drop-title { font-size: 0.86rem; font-weight: 600; }
+.adm-drop-note { font-size: 0.74rem; color: var(--a-text-3); }
+.adm-drop-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* ── tabel ───────────────────────────────────────────────────────────────── */
+.adm-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--a-line);
+}
+.adm-search { position: relative; flex: 1 1 220px; max-width: 340px; }
+.adm-search svg {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--a-text-3);
+}
+.adm-search .adm-input { padding-left: 38px; }
+
+.adm-table-wrap { overflow: auto; }
+.adm-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.adm-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--a-text-2);
+  background: var(--a-surface-2);
+  border-bottom: 1px solid var(--a-line);
+  white-space: nowrap;
+}
+.adm-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--a-line);
+  vertical-align: middle;
+}
+.adm-table tbody tr:hover { background: var(--a-surface-2); }
+.adm-table tbody tr[data-clickable="true"] { cursor: pointer; }
+.adm-table td[data-numeric="true"] { text-align: right; font-variant-numeric: tabular-nums; }
+.adm-cell-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+.adm-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--a-text-2);
+  font-size: 0.86rem;
+}
+
+/* Tombol paginasi di BAWAH tabel. Aturan dashboard. */
+.adm-pager {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--a-line);
+  font-size: 0.8rem;
+  color: var(--a-text-2);
+}
+.adm-pager-actions { margin-left: auto; display: flex; gap: 8px; }
+
+/* ── lencana status ──────────────────────────────────────────────────────── */
+.adm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.adm-badge[data-tone="ok"] { background: var(--a-ok-soft); color: var(--a-ok); }
+.adm-badge[data-tone="warn"] { background: var(--a-warn-soft); color: var(--a-warn); }
+.adm-badge[data-tone="danger"] { background: var(--a-danger-soft); color: var(--a-danger); }
+.adm-badge[data-tone="muted"] { background: rgba(110, 117, 127, 0.12); color: var(--a-text-2); }
+.adm-badge[data-tone="accent"] { background: var(--a-accent-soft); color: #7A5F0C; }
+
+/* ── tab bahasa ──────────────────────────────────────────────────────────── */
+.adm-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--a-line);
+  border-radius: 999px;
+  background: var(--a-surface-2);
+  margin-bottom: 14px;
+}
+.adm-tab {
+  min-height: 34px;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--a-text-2);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.adm-tab[aria-selected="true"] {
+  background: var(--a-accent);
+  color: var(--a-on-accent);
+}
+/* Medan yang TIDAK bergantung bahasa duduk di bawah blok tab, dipisah garis.
+   Aturan produk, dan berlaku di semua form, bukan hanya form produk. */
+.adm-shared-fields {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--a-line-strong);
+}
+.adm-shared-label {
+  margin: 0 0 12px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--a-text-3);
+}
+
+/* ── laci kanan, laci bawah, dialog ──────────────────────────────────────── */
+.adm-scrim-fixed {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(16, 18, 22, 0.42);
+  animation: adm-fade 200ms var(--a-e);
+}
+@keyframes adm-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Laci KANAN ke kiri, berhenti di batas sidebar pada desktop. Aturan produk. */
+.adm-drawer-right {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 248px;
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
+  background: var(--a-surface);
+  border-left: 1px solid var(--a-line);
+  box-shadow: -24px 0 60px -30px rgba(16, 18, 22, 0.45);
+  animation: adm-slide-right 320ms var(--a-e);
+}
+@media (max-width: 1023px) {
+  .adm-drawer-right { left: 0; }
+}
+@keyframes adm-slide-right { from { transform: translateX(100%); } to { transform: none; } }
+
+/* Laci BAWAH ke atas, tinggi 85 persen layar. Aturan produk. */
+.adm-drawer-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 85dvh;
+  z-index: 71;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px 16px 0 0;
+  background: var(--a-surface);
+  box-shadow: 0 -24px 60px -30px rgba(16, 18, 22, 0.45);
+  animation: adm-slide-up 320ms var(--a-e);
+}
+@keyframes adm-slide-up { from { transform: translateY(100%); } to { transform: none; } }
+
+.adm-grabber {
+  width: 44px;
+  height: 4px;
+  margin: 10px auto 0;
+  border-radius: 999px;
+  background: var(--a-line-strong);
+}
+
+.adm-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--a-line);
+}
+.adm-drawer-head h2 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.adm-drawer-head p { margin: 2px 0 0; font-size: 0.76rem; color: var(--a-text-2); }
+.adm-drawer-body { flex: 1; min-height: 0; overflow: auto; padding: 18px; }
+.adm-drawer-foot {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 14px 18px;
+  border-top: 1px solid var(--a-line);
+  background: var(--a-surface-2);
+}
+
+.adm-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 71;
+  width: min(440px, calc(100vw - 32px));
+  border-radius: var(--a-radius);
+  background: var(--a-surface);
+  box-shadow: 0 30px 80px -30px rgba(16, 18, 22, 0.5);
+  animation: adm-pop 220ms var(--a-e);
+}
+@keyframes adm-pop {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ── kerangka muat ───────────────────────────────────────────────────────── */
+.adm-skel {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--a-line) 25%, var(--a-surface-2) 37%, var(--a-line) 63%);
+  background-size: 400% 100%;
+  animation: adm-shimmer 1.4s ease infinite;
+}
+@keyframes adm-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+/* ── halaman masuk ───────────────────────────────────────────────────────── */
+.adm-login {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--a-sidebar);
+}
+.adm-login-card {
+  width: min(400px, 100%);
+  padding: 28px;
+  border-radius: 16px;
+  background: var(--a-surface);
+  box-shadow: 0 30px 90px -40px rgba(0, 0, 0, 0.7);
+}
+.adm-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  color: var(--a-text);
+}
+.adm-login-card h1 {
+  margin: 0 0 4px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.adm-login-card > p {
+  margin: 0 0 20px;
+  font-size: 0.82rem;
+  color: var(--a-text-2);
+}
+.adm-login-card .adm-btn { width: 100%; min-height: 48px; }
+
+/* ── gerak dikurangi ─────────────────────────────────────────────────────── */
+/* Wajib menurut CLAUDE.md, dan panel tidak dikecualikan. Yang dimatikan adalah
+   animasinya, bukan keterlihatan elemennya: laci tetap muncul, hanya tanpa
+   meluncur. */
+@media (prefers-reduced-motion: reduce) {
+  [data-admin] *,
+  [data-admin] *::before,
+  [data-admin] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

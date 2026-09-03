@@ -5,7 +5,13 @@ import { X } from "lucide-react";
 import { motion, AnimatePresence, HTMLMotionProps } from "framer-motion";
 
 // Helper for cn if not provided
-const dummyCn = (...inputs) => {
+// CATATAN JANGKAR: satu-satunya suntingan pada berkas vendor ini, dan ia hanya
+// menambahkan anotasi tipe. Tanpa `unknown[]`, rest parameter ini implicitly
+// any dan `next build` gagal total begitu dialog diimpor, sesuai aturan
+// "perbaiki per komponen saat komponen itu diadopsi" di CLAUDE.md. Perilakunya
+// tidak berubah sama sekali; cabang ini bahkan tidak pernah jalan, karena `cn`
+// di atas adalah impor statis yang selalu terdefinisi.
+const dummyCn = (...inputs: unknown[]) => {
     return inputs.filter(Boolean).join(' ');
 };
 const cnFunction = typeof cn !== 'undefined' ? cn : dummyCn;
