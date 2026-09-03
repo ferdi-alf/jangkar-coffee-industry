@@ -3,22 +3,42 @@
 Monorepo untuk situs Jangkar Coffee Industry. Ditulis untuk sesi mendatang yang belum punya
 konteks, baca ini sebelum menulis kode.
 
-> ## Status proyek: Tahap A
+> ## Status proyek: hidup, basis data terisi, panel bisa dimasuki
 >
-> Menunggu MCP **Higgsfield** dan **21st.dev** terdaftar. Periksa dengan `cat .mcp.json`.
-> Bila di sana hanya ada `supabase`, keduanya belum terhubung dan tidak ada generasi visual
-> yang bisa dijalankan. Tahap B (fondasi i18n, middleware, kerangka modul) boleh jalan
-> tanpa menunggu itu.
+> Situs publik dua bahasa, Express bermodul lengkap, panel admin di `/dashboard` dan seterusnya,
+> Supabase `fylxkwqwuaidbfpmdwhu` sudah bermigrasi dan terisi. Semuanya sudah diuji ujung ke ujung
+> dengan login sungguhan pada 2026-09-03.
 >
-> **Spesifikasi lengkap ada di [`docs/PROJECT-SPEC.md`](docs/PROJECT-SPEC.md). Baca sebelum
-> menulis kode.** Di sana ada misi bertahap, aturan tetap, aturan produk yang ditetapkan
-> pemilik proyek, arsitektur per modul, contract API, aturan keamanan, skema basis data,
-> aturan dashboard, dan anggaran performa.
+> **Isi basis data:** 34 produk (68 terjemahan, 68 penanda kanal, 10 di antaranya aktif di kanal
+> keliling), 6 kategori, 1 outlet, 9 seksi konten dengan 101 medan dan 202 terjemahan, 1 akun
+> owner. Nol tautan marketplace dan nol media, keduanya sengaja kosong karena datanya belum ada.
 >
-> Yang paling mudah dilanggar tanpa sadar, semuanya dijelaskan di dokumen itu:
-> tidak ada em dash di teks mana pun, ikon resmi bukan emoji, rute admin tanpa prefiks
-> `/admin`, aturan dialog dan drawer di admin, toast sonner di kiri atas, dan backup ke
-> `backups/` sebelum setiap perubahan begitu situs sudah ada.
+> **`apps/api/.env` sudah terisi** dari `secrets/ACCESS.md` dan diblokir git. Jalankan
+> `npm run dev` dari akar untuk web dan api sekaligus.
+>
+> **Tiga hal yang tersisa untuk pemilik proyek, semuanya data bisnis bukan kode:**
+>
+> 1. **Ganti kata sandi owner**, lalu hapus `ADMIN_BOOTSTRAP_PASSWORD` dari `apps/api/.env`.
+>    Kata sandi yang ada sekarang dibangkitkan acak oleh skrip bootstrap.
+> 2. **Isi tautan Shopee dan Tokopedia** di `/management-product`. Sudah terbukti: begitu terisi,
+>    tombol di situs berubah dari `<span>` mati jadi `<a href>` sungguhan tanpa menyentuh kode.
+> 3. **Koordinat HQ yang tepat** di `/outlet`. Selama `coords_approximate` masih menyala, tombol
+>    navigasi memakai alamat teks, bukan koordinatnya.
+>
+> Satu ambiguitas data menunggu keputusan Anda: "Americano" dan "Americano / Long Black" masuk
+> sebagai DUA produk karena menu outlet dan poster keliling menuliskannya berbeda. Kalau memang
+> satu minuman, hapus salah satunya di `/management-product` lalu nyalakan kedua kanal pada yang
+> tersisa.
+>
+> Dua peringatan advisor Supabase yang tersisa, keduanya setelan dashboard bukan kode:
+> perlindungan kata sandi bocor (HaveIBeenPwned) masih mati, dan 19 temuan INFO
+> `rls_enabled_no_policy` yang memang DISENGAJA, lihat migrasi RLS.
+>
+> **Cara deploy ada di [`DEPLOY.md`](DEPLOY.md)**, lengkap dengan variabel environment per proyek,
+> perintah verifikasi, dan keterbatasan yang sudah diketahui. Baca sebelum menyentuh Vercel.
+>
+> MCP **Higgsfield** dan **21st.dev** sudah terhubung meski `.mcp.json` hanya memuat `supabase`.
+> Jangan memakai `cat .mcp.json` sebagai penentu, periksa daftar tool yang tersedia.
 
 ---
 
@@ -51,8 +71,26 @@ packages/ (belum ada, dibuat di M2)
 docs/design/  dokumentasi fase 1–7, sumber kebenaran desain
 ```
 
-**Panel admin ada di dalam `apps/web`, bukan app terpisah.** Rencananya sebagai route group:
-`app/(site)/` untuk publik, `app/(admin)/admin/` untuk panel.
+**Panel admin ada di dalam `apps/web`, bukan app terpisah.** Sudah dibangun, sebagai route group:
+
+```
+app/(site)/[locale]/   publik, layout akar dengan <html lang={locale}>
+app/(admin)/           panel, layout akar dengan <html lang="id">, tanpa prefiks locale
+app/globals.css        gaya situs publik
+app/admin.css          gaya panel, HANYA diimpor (admin)/layout.tsx
+```
+
+**DUA LAYOUT AKAR, dan keduanya wajib berada di route group tingkat atas.** Itu aturan Next, bukan
+selera: panel tanpa prefiks locale butuh `lang` tetap, situs publik butuh `lang` yang mengikuti
+locale, dan satu layout akar tidak bisa melayani keduanya. Karena itu `[locale]` ada DI DALAM
+`(site)`, bukan di akar `app/`. Group tidak muncul di URL, jadi `/id` tetap `/id`.
+
+**`admin.css` terpisah karena alasan performa, jangan digabung ke `globals.css`.** Terukur: gaya
+panel 4.031 byte setelah gzip, dan pemisahan ini membuat nol byte di antaranya diunduh pengunjung
+halaman publik. Rute admin: `/login`, `/dashboard`, `/product`, `/management-product`, `/category`,
+`/outlet`, `/keliling`, `/content`, `/media`, `/pesan`. Menambah satu berarti menambah satu entri
+di `shared/constants/routes.ts`, karena daftar itulah yang dipakai middleware untuk tahu bahwa
+segmen tersebut bukan kode bahasa.
 
 `apps/web` memakai **struktur default Next.js: App Router, tanpa folder `src/`.** Route ada di
 `apps/web/app/`, dan alias `@/*` menunjuk ke akar app (`./*`), bukan `./src/*`. Jangan
@@ -189,6 +227,109 @@ harus **diamandemen formal**, bukan diabaikan diam-diam. Kalau menyentuh dokumen
 dari komponen-komponen itu.
 
 > **Setelah semuanya selesai, hapus komponen yang tidak terpakai.** Diminta eksplisit.
+
+---
+
+## Backend dan panel admin
+
+Express sudah ditata per modul sesuai spec: `src/modules/<nama>/{routes,controller,service,repository,schema,contract}.ts`
+plus `src/shared/{contracts,middleware,db,utils,constants}`. Modul yang ada: `auth`, `product`,
+`category`, `outlet`, `keliling`, `content`, `media`, `stats`, `contact`, `health`.
+
+**Aturan lapisan ditegakkan, jangan dilanggar diam-diam:** hanya repository yang mengimpor klien
+Supabase, dan service tidak pernah melihat objek `Request` Express. Itulah yang membuat aturan
+bisnis bisa diuji tanpa menyalakan server.
+
+Tiga hal yang mudah dirusak tanpa sadar:
+
+- **`requireAuth` memeriksa cookie SEBELUM ketersediaan basis data.** Urutan ini disengaja.
+  Permintaan tanpa sesi memang tidak terautentikasi apa pun keadaan server, dan pemanggil anonim
+  tidak perlu tahu apakah server sudah punya kredensial atau belum.
+- **`loginLimiter` memakai `ipKeyGenerator`, bukan `req.ip` mentah.** Satu pelanggan IPv6 memegang
+  seluruh blok /64, jadi kunci berdasarkan alamat utuh bisa diputar miliaran kali dan batas per IP
+  jadi tidak berarti.
+- **`requireCsrf` dipasang SEBELUM multer pada unggahan media.** Token ada di header, jadi bisa
+  diperiksa tanpa menyentuh badan permintaan. Kalau dibalik, permintaan tanpa token tetap membuat
+  5 MB berkas dibaca ke memori lebih dulu baru ditolak.
+
+Panelnya memakai TanStack Query terhadap Express, sonner untuk toast (posisi kiri atas), dan
+recharts untuk grafik. Komponen bersama ada di `shared/components/`: `DataTable`, `FormDrawer`
+(kanan, panah kiri di kiri atas, berhenti di batas sidebar), `DetailDrawer` (bawah, 85 persen),
+`ConfirmDialog` (form sampai 3 medan), `DropzoneField`, `PasswordField`, `LocaleTabs`, `StatCard`,
+`ChartCard`. Aturan bentuk input dari pemilik proyek ditegakkan komponen-komponen itu, bukan
+diingat manusia tiap halaman.
+
+**Grafik dashboard hanya memakai data yang benar-benar ada.** Tidak ada pendapatan, trafik, atau
+konversi: sistem ini tidak mencatat satu pun transaksi, jadi grafik penjualan hanya akan jadi angka
+karangan. Jangan menambahkannya.
+
+### Keliling: menu saja, tidak ada armada dan tidak ada lokasi
+
+Seksi Keliling di situs **hanya menampilkan menu armada**, logo sub-brand, dan satu baris "jadwal
+titik henti menyusul". Tidak ada jumlah armada, tidak ada titik singgah, tidak ada jadwal.
+
+Panel sempat punya halaman yang mengurus unit armada dan jadwal, dan itu salah: ia mengelola data
+yang tidak pernah dilihat satu pengunjung pun. Tabel `keliling_unit` dan `keliling_schedule`
+beserta modul API-nya **sudah dihapus** lewat migrasi `20260903_0110_drop_keliling.sql`. Jangan
+menghidupkannya kembali tanpa lebih dulu menambahkan blok jadwal ke situsnya.
+
+Isi menu Keliling hidup di `product_channel` dengan channel `keliling`, dikelola halaman
+`/keliling` di panel, dan dibaca situs lewat `modules/home/lib/keliling-menu.ts`.
+
+**Pengelompokan dua kategori adalah ATURAN TAMPILAN, bukan skema.** Poster aslinya membagi menu
+jadi Coffee dan Non-Coffee, sedangkan tiap produk hanya punya satu kategori yang mengikuti menu
+outlet: "Kopi Susu Jangkar" ada di Signature Series di sana. Satu kolom tidak bisa melayani dua
+menu yang mengelompokkan berbeda, jadi aturannya sederhana: berkategori `non-coffee` masuk
+Non-Coffee, sisanya Coffee. Terukur, hasilnya sama persis dengan poster aslinya, enam kopi dan
+empat non-kopi.
+
+### API diproksikan lewat origin situs, jangan diubah jadi panggilan langsung
+
+Peramban **tidak pernah** memanggil `apps/api` secara langsung. Ia memanggil `/api/...` pada origin
+situs, dan `apps/web/next.config.ts` meneruskannya ke `API_ORIGIN`. Karena itu tidak ada
+`NEXT_PUBLIC_API_URL` di kode mana pun.
+
+Alasannya bukan kerapian. Cookie sesi panel adalah httpOnly `SameSite=Lax`, dan dua proyek Vercel
+mendapat domain `a.vercel.app` dan `b.vercel.app`. Terverifikasi: **`vercel.app` ada di Public
+Suffix List**, jadi kedua subdomain itu LINTAS SITE dan peramban tidak akan pernah mengirim cookie
+Lax ke sana. Tanpa proksi ini, panel admin mustahil dimasuki di domain bawaan Vercel maupun di
+preview deployment. Sebagai bonus, CORS lenyap sepenuhnya.
+
+Terbukti di lokal: sepanjang alur masuk sampai menyimpan perubahan, peramban hanya menghubungi satu
+host. `COOKIE_DOMAIN` karena itu harus **kosong**, termasuk di produksi.
+
+Pengambilan data sisi server tetap memakai `API_ORIGIN` absolut, karena ia terjadi saat build dan
+tidak punya origin untuk dijadikan acuan relatif.
+
+### Batas unggah 4 MB ditentukan Vercel, bukan selera
+
+Batas body permintaan Vercel Functions adalah 4,5 MB. Nilai di
+`apps/api/src/modules/media/media.contract.ts` dan `apps/web/modules/media/hooks/useMedia.ts` harus
+**sama** dan harus tetap di bawah itu, kalau tidak penolakan terjadi di Vercel dengan halaman galat
+mereka, bukan di form dengan pesan kita.
+
+### Batas laju melemah di serverless, dan itu belum diperbaiki
+
+`express-rate-limit` memakai memori proses. Di Vercel setiap instance punya memorinya sendiri, jadi
+"5 per menit" berarti 5 per menit PER INSTANCE. API mencetak peringatan sekali saat start di
+produksi. Perbaikannya store bersama, dan itu menunggu keputusan pemilik proyek. Lihat `DEPLOY.md`.
+
+### Keluaran build bergantung API, dan itu punya dua jebakan
+
+`RoasterySection` dan `KelilingSection` mengambil datanya lewat `fetch` saat build. Akibatnya:
+
+1. **Cache fetch Next** menyimpan respons selama `revalidate` (300 detik), jadi build ulang dalam
+   rentang itu memakai data lama. Untuk memverifikasi perubahan data secara lokal:
+   `rm -rf apps/web/.next/cache/fetch-cache` lebih dulu.
+2. **Cache Turborepo** bisa memutar ulang seluruh keluaran build tanpa menjalankannya, karena ia
+   hanya melihat berkas sumber dan tidak tahu data di API sudah berubah. Pakai
+   `npx turbo run build --force` kalau perlu memastikan.
+
+Di produksi keduanya tidak berbahaya, ISR menyegarkan halamannya sendiri dalam lima menit. Yang
+menyesatkan hanyalah verifikasi lokal.
+
+**Kedua seksi itu selalu punya cadangan konstanta.** Kalau API mati saat build, halaman jatuh ke
+`menu-data.ts` alih-alih menggagalkan build. Jangan mencabut cadangannya.
 
 ---
 

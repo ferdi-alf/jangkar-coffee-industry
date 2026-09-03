@@ -1,0 +1,38 @@
+/**
+ * Angka dashboard.
+ *
+ * SEMUANYA DATA YANG BENAR-BENAR ADA DI SISTEM INI. Tidak ada pendapatan, tidak
+ * ada trafik, tidak ada konversi. Jangkar tidak menjual lewat situs ini, jadi
+ * tidak ada satu pun transaksi yang tercatat di basis data, dan menggambar
+ * grafik penjualan berarti menggambar angka karangan.
+ */
+export interface StatsOverview {
+  counts: {
+    products: number;
+    publishedProducts: number;
+    ecommerceProducts: number;
+    soldOutProducts: number;
+    categories: number;
+    outlets: number;
+    contactNew: number;
+    contactTotal: number;
+  };
+  /** Pesan kontak per hari, 30 hari terakhir. */
+  contactByDay: { date: string; count: number }[];
+  /**
+   * Kelengkapan terjemahan. Ini metrik yang benar-benar berguna di sini:
+   * situsnya dua bahasa, dan medan yang tertinggal di satu bahasa adalah lubang
+   * yang tidak terlihat sampai ada pengunjung yang menemukannya.
+   */
+  translation: { entity: string; total: number; id: number; en: number }[];
+  /**
+   * Jumlah item menu per kanal.
+   *
+   * MENGGANTIKAN cakupan jadwal keliling, yang dicabut karena situs ini tidak
+   * pernah menampilkan jadwal maupun jumlah armada. Seksi Keliling hanya
+   * menampilkan menunya, jadi angka yang berguna adalah berapa item yang
+   * benar-benar dibawa tiap kanal.
+   */
+  channelCounts: { channel: string; count: number }[];
+  recentAudit: { action: string; entity: string; summary: string | null; at: string; actor: string | null }[];
+}

@@ -153,6 +153,12 @@ What did change: gold is no longer confined to the crest artwork. In the `outlet
 
 **[ASK]** Is that claim still safe to make publicly in 2026?
 
+> **ANSWERED 2026-08-31 by the project owner: no.** The "first mobile coffee in Palembang" claim
+> is not carried on the website. The Keliling section now uses a descriptive eyebrow with no
+> superlative. The printed poster keeps it; the site does not repeat it.
+>
+> This closes the question. Do not reopen it or reintroduce the claim from the poster.
+
 ---
 
 ## 7. Product and photography — a real problem, named

@@ -231,6 +231,33 @@ There is no middle. No `4px`, no `8px`, no `12px`. Sharp corners read as industr
 
 *(Concept 04 is permitted a 2px radius as part of its softer register — the one sanctioned deviation, and something to react to.)*
 
+> ### AMENDMENT A1 · Radius, concept 06 Arus (2026-08-31)
+>
+> **Status: adopted.** Concept 06 Arus was selected by the client and is now built. It uses
+> **16px on cards and rows, 18px on product and outlet cards, 999px on pills**. This is a
+> deliberate, sanctioned departure from the 0px rule above, not an oversight.
+>
+> The reason is stated in `design-comparison.md` §06: sharp corners fight this concept's
+> vocabulary. Arus is carried by soft geometry, floating dock nav, glow and bento grids. A 0px
+> radius inside that vocabulary reads as two systems arguing rather than one system speaking.
+>
+> **Scope.** The amendment applies only to concept 06 and only to card-like surfaces and pills.
+> Everything else in §5 stands unchanged: buttons, focus rings, borders, and the ban on the
+> generic middle ground between 0 and a full pill. No `4px`, no `8px`, no `12px`, still.
+>
+> **Extended 2026-08-31.** The four Chain cards now carry a continuously travelling border beam,
+> which is repeating motion and therefore outside the original budget. It is admitted under the
+> same boundary, not as a new licence: the Chain cards live inside the hero's pinned stage, so
+> the exception has not moved below the fold. Conditions: `transform` and a custom angle property
+> only, each card phase-offset so the four never pulse together, paused when the film is idle,
+> and removed entirely under `prefers-reduced-motion`.
+>
+> Everything genuinely below the fold still reveals once and then holds still.
+>
+> Recorded because CLAUDE.md requires this deviation to be amended formally rather than ignored
+> quietly. It was briefly implemented as `radius: 0` with a comment that inverted the rule; that
+> was a mistake and is corrected.
+
 ### Buttons
 
 | Variant | Fill | Text | Border | Use |
@@ -287,6 +314,36 @@ Permitted:
 - Opacity and small Y-translate (≤16px) on scroll reveal, once, never repeating
 - Colour and border transitions on hover
 - Underline draw on link hover
+
+> ### AMENDMENT A2 · Motion budget, concept 06 Arus (2026-08-31)
+>
+> **Status: adopted, with a hard boundary.** The hero exceeds the two-moving-things budget: a
+> pinned scroll film runs up to five beats at once, and the branch carries a continuous wind
+> loop while idle.
+>
+> **The boundary that keeps this honest.** The exception is confined to the hero and its
+> transition into the Chain section. Everything below the fold stays inside the original budget:
+> reveal once on entry, opacity plus a small Y-translate, colour and border on hover, nothing
+> repeating. That split is the project owner's own rule, and it is what stops the exception from
+> becoming the norm.
+>
+> **Conditions attached.** The film only runs where it can be afforded: pinned on desktop,
+> scroll-driven without pin on mobile, and fully static under `prefers-reduced-motion`, verified
+> as zero pixels changing. Idle motion pauses via `IntersectionObserver` the moment it leaves the
+> viewport. Only `transform` and `opacity` are animated. Measured on the built page: LCP under
+> 1.5s and CLS 0 across 1.6 to 12 Mbps at 360px.
+>
+> **Extended 2026-08-31.** The four Chain cards now carry a continuously travelling border beam,
+> which is repeating motion and therefore outside the original budget. It is admitted under the
+> same boundary, not as a new licence: the Chain cards live inside the hero's pinned stage, so
+> the exception has not moved below the fold. Conditions: `transform` and a custom angle property
+> only, each card phase-offset so the four never pulse together, paused when the film is idle,
+> and removed entirely under `prefers-reduced-motion`.
+>
+> Everything genuinely below the fold still reveals once and then holds still.
+>
+> Recorded because CLAUDE.md requires this deviation to be amended formally rather than ignored
+> quietly.
 - Marquee — **Concept 05 only**, where movement is the brand idea rather than decoration
 
 Not permitted: parallax, scroll-jacking, counters, typewriter effects, scale-on-hover above 1.02, staggered letter animation, anything that repeats indefinitely outside Concept 05.

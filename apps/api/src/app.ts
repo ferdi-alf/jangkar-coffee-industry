@@ -1,8 +1,21 @@
+import cookieParser from "cookie-parser";
 import cors from "cors";
-import express, { type Express, type NextFunction, type Request, type Response } from "express";
+import express, { type Express } from "express";
 import helmet from "helmet";
 
-import { healthRouter } from "./routes/health.js";
+import { requestId } from "./shared/contracts/envelope.js";
+import { issueCsrf } from "./shared/middleware/csrf.js";
+import { errorHandler, notFound } from "./shared/middleware/errorHandler.js";
+import { generalLimiter, warnIfUnsharedRateLimitStore } from "./shared/middleware/rateLimit.js";
+import { authRouter } from "./modules/auth/auth.routes.js";
+import { categoryRouter } from "./modules/category/category.routes.js";
+import { contactRouter } from "./modules/contact/contact.routes.js";
+import { contentRouter } from "./modules/content/content.routes.js";
+import { healthRouter } from "./modules/health/health.routes.js";
+import { mediaRouter } from "./modules/media/media.routes.js";
+import { outletRouter } from "./modules/outlet/outlet.routes.js";
+import { productRouter } from "./modules/product/product.routes.js";
+import { statsRouter } from "./modules/stats/stats.routes.js";
 
 /**
  * Membangun aplikasi Express.
@@ -17,6 +30,8 @@ import { healthRouter } from "./routes/health.js";
  * Kalau listen() dipanggil di sini, deploy Vercel akan menggantung.
  */
 export function createApp(): Express {
+  warnIfUnsharedRateLimitStore();
+
   const app = express();
 
   // Vercel berjalan di belakang proxy, tanpa ini req.ip dan
@@ -34,24 +49,33 @@ export function createApp(): Express {
   app.use(cors({ origin: origins, credentials: true }));
   app.use(express.json({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParser());
 
+  // Satu id per permintaan, dipakai amplop respons dan log. Harus di atas
+  // seluruh route supaya tidak ada respons yang lolos tanpa id.
+  app.use(requestId);
+
+  /* Health SENGAJA di atas rate limit. Ia dipanggil pemantau setiap beberapa
+     detik, dan membiarkannya ikut kuota 100 per menit berarti pemantauannya
+     sendiri yang akan memicu penolakan. */
   app.use("/health", healthRouter);
 
-  // 404
-  app.use((req: Request, res: Response) => {
-    res.status(404).json({ ok: false, error: "Not Found", path: req.originalUrl });
-  });
+  // 100 per menit, batas umum dari tabel Keamanan. Route yang lebih rawan punya
+  // batasnya sendiri yang jauh lebih ketat, dipasang di router masing-masing.
+  app.use(generalLimiter);
 
-  // Error handler. Express 5 meneruskan rejection async ke sini secara
-  // otomatis, jadi route tidak perlu membungkus dengan try/catch sendiri.
-  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    if (process.env.NODE_ENV !== "production") console.error(err);
-    res.status(500).json({
-      ok: false,
-      error: process.env.NODE_ENV === "production" ? "Internal Server Error" : message,
-    });
-  });
+  app.get("/csrf", issueCsrf);
+  app.use("/auth", authRouter);
+  app.use("/contact", contactRouter);
+  app.use("/products", productRouter);
+  app.use("/categories", categoryRouter);
+  app.use("/outlets", outletRouter);
+  app.use("/content", contentRouter);
+  app.use("/media", mediaRouter);
+  app.use("/stats", statsRouter);
+
+  app.use(notFound);
+  app.use(errorHandler);
 
   return app;
 }

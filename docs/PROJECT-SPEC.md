@@ -305,6 +305,31 @@ Struktur amplop selalu sama, untuk semua endpoint tanpa kecuali.
 
 Query standar untuk daftar: `?page=&perPage=&q=&sort=&order=&locale=`
 
+### Endpoint yang sudah ada
+
+| Metode | Jalur | Isi |
+|---|---|---|
+| GET | `/health` | Status layanan. Sengaja di ATAS rate limit umum, karena pemantau memanggilnya tiap beberapa detik |
+| GET | `/csrf` | Menaruh cookie CSRF httpOnly dan mengembalikan token yang sama di badan respons |
+| POST | `/contact` | Form kontak beranda. Validasi zod, rate limit 5 per 10 menit per IP, wajib header `X-CSRF-Token` |
+| POST | `/auth/login` | Masuk panel. Rate limit 5 per menit per IP DAN per akun |
+| POST | `/auth/refresh` | Memperpanjang sesi dari cookie refresh |
+| POST | `/auth/logout` | Mencabut token di Supabase lalu menghapus cookie |
+| GET | `/auth/me` | Sesi yang sedang berjalan beserta perannya |
+| GET/POST/PATCH/DELETE | `/products` | Baca terbuka, tulis butuh sesi. `PATCH /:id/sold-out` boleh staff |
+| GET/POST/PATCH/DELETE | `/categories` | Tulis hanya owner |
+| GET/POST/PATCH/DELETE | `/outlets` | Tulis hanya owner |
+| GET/POST/PATCH/DELETE | `/keliling/units` | Hanya owner |
+| GET/POST/PATCH/DELETE | `/keliling/schedules` | Owner dan staff, jadwal adalah operasi harian |
+| GET | `/content/public` | Bentuk datar untuk RSC situs publik, hanya seksi berstatus published |
+| GET/PATCH | `/content`, `/content/:key` | Teks halaman. PATCH hanya owner |
+| GET/POST/DELETE | `/media` | Unggahan lewat multer, magic bytes diperiksa, alt text wajib dua bahasa |
+| GET | `/stats/overview` | Angka dashboard. Butuh sesi |
+| GET/PATCH/DELETE | `/contact/messages` | Kotak masuk. Butuh sesi, hapus hanya owner |
+
+Batas `/contact` jauh lebih ketat daripada 100 per menit yang berlaku umum, karena ia satu
+satunya endpoint yang bisa ditulis tanpa login dan karena itu permukaan spam paling terbuka.
+
 ### Pengambilan data sesuai permintaan
 
 Aturan Anda: saat drawer terbuka, data yang sudah ada di cache tidak diambil ulang, hanya sisa
@@ -357,11 +382,39 @@ product_variant            per satuan berat maupun per kemasan
 product_channel            ketersediaan per kanal, outlet dan keliling
 category  + category_translation
 outlet    + outlet_translation
-keliling_unit, keliling_schedule
+keliling_unit, keliling_schedule            DIHAPUS 2026-09-03, lihat catatan di bawah
 page_section + page_section_translation      hero, about, dan teks beranda lain
 media                                        alt text wajib, bukan opsional
 admin_user, audit_log
+
+contact_message            id, name, email, message, ip_hash, status, created_at
+                           RLS menyala TANPA policy, jadi hanya kunci rahasia di
+                           server yang bisa menulis dan tidak ada satu pun yang
+                           bisa membaca dari peramban
 ```
+
+**KOREKSI 2026-09-02, skema yang benar-benar dijalankan.** Rancangan di atas dipertahankan
+sebagai niat, tapi bentuk akhirnya berbeda di beberapa tempat, dan perbedaannya ada alasannya:
+
+| Rancangan | Yang dibangun | Alasan |
+|---|---|---|
+| `page_section` + `page_section_translation` | `page_section` + `page_content` + `page_content_translation` | Teks beranda bersarang dalam, misalnya `hero.headline.accent`. Satu set kolom tetap tidak akan pernah muat. `page_content` mendaftar medan beserta jenisnya, jadi panel membangkitkan formnya sendiri dan menambah medan tidak perlu menyentuh kode |
+| `media` dengan alt text wajib | `media` + `media_translation` | Alt text adalah teks yang tampil publik seperti teks lain, jadi ia ikut diterjemahkan. Constraint `check` menegakkan wajibnya di basis data, bukan hanya di form |
+| `product` | `product` plus `price_note`, `is_favourite`, `is_sold_out` | Menu cetaknya memuat harga tak beraturan seperti "15k / 100gr" dan penanda jempol serta coretan habis, dan ketiganya sudah dipakai sungguhan |
+| `outlet` | `outlet` plus `coords_approximate` | Koordinat HQ masih perkiraan. Selama penanda ini menyala, situs memakai alamat teks untuk navigasi, bukan koordinatnya. Tanpa kolom ini perbedaan itu hilang |
+| `keliling_unit`, `keliling_schedule` | **dihapus seluruhnya** | Situs hanya menampilkan MENU armada, tidak pernah jumlah armada maupun titik singgahnya, jadi kedua tabel ini mengelola data yang tidak pernah tampil. Isi menu Keliling sudah punya tempatnya sendiri di `product_channel`. Migrasi `20260903_0110_drop_keliling.sql` |
+| `admin_user` | sama, tanpa kolom kata sandi | Autentikasi memakai Supabase Auth, jadi hash kata sandi hidup di skema `auth`. Menyalinnya berarti dua sumber kebenaran untuk satu hal |
+
+Ditambahkan juga domain `locale_code` yang membatasi nilai ke `id` dan `en`, dipakai check
+constraint di SETIAP tabel terjemahan, jadi baris berbahasa asing tidak bisa masuk lewat jalur
+mana pun.
+
+`contact_message` TIDAK ada di rancangan awal, ia ditambahkan belakangan saat pemilik proyek
+meminta form kontak di beranda. Ia berdiri sendiri, tidak punya tabel terjemahan, karena isinya
+tulisan pengunjung dan bukan konten situs. IP disimpan sebagai hash, bukan apa adanya: yang
+dibutuhkan untuk menelusuri penyalahgunaan hanya kemampuan melihat dua pesan datang dari sumber
+yang sama, dan menyimpan alamat aslinya menambah data pribadi tanpa menambah kemampuan yang
+benar-benar dipakai.
 
 Indeks yang disiapkan sejak awal: `product_translation(locale, title)` dengan GIN trigram untuk
 pencarian, `product(status, sort_order)`, `keliling_schedule(unit_id, date)`.
@@ -429,7 +482,7 @@ transisi UI biasa. Kalau ternyata salah satu cukup, yang lain dicabut sebelum ri
 |---|---|
 | `apps/web/lightswind.css` | Pindah ke `apps/web/app/lightswind.css`, impor dari `globals.css`, hapus yang di akar `apps/web` |
 | `backups/` | Tambahkan ke `.gitignore` sebelum backup pertama dibuat |
-| Paket yang belum ada | `sonner`, `zod`, `@supabase/supabase-js`, `@tanstack/react-query`, `next-intl`, `express-rate-limit`, `helmet` sudah ada |
+| Paket yang belum ada | **KOREKSI 2026-08-31.** Baris ini semula menyatakan tujuh paket sudah ada. Diperiksa: hanya `helmet` yang benar-benar terpasang. `sonner`, `zod`, `@supabase/supabase-js`, `@tanstack/react-query`, `next-intl`, dan `express-rate-limit` TIDAK ADA. **KOREKSI 2026-09-02.** `recharts` TERNYATA SUDAH terpasang di apps/web, berbeda dari yang tersirat di atas. Yang sejak itu dipasang: `server-only`, `leaflet`, `zod`, `express-rate-limit`, `cookie-parser`, `@supabase/supabase-js`, `multer` (apps/api), `@tanstack/react-query`, `sonner` (apps/web). `next-intl` TIDAK dipakai, i18n ditulis sendiri tanpa dependensi |
 | Komponen tak terpakai | Dihapus di akhir proyek, dari lightswind maupun reactbits |
 | Galat tipe vendor | 100 galat saat dipasang. Folder vendor dikeluarkan dari `tsconfig`. Perbaiki per komponen saat diadopsi, bukan sekaligus |
 

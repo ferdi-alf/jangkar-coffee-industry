@@ -1,0 +1,22 @@
+{
+  "//": [
+    "Typecheck khusus untuk scripts/, TERPISAH dari tsconfig build.",
+    "",
+    "ADA KARENA generate-seed.ts SENGAJA mengimpor lintas workspace ke apps/web:",
+    "sumber kebenaran menu ada di sana, dan menyalinnya ke apps/api berarti membuat",
+    "salinan kedua yang bisa menyimpang diam-diam. Impor itu membuat berkasnya di luar",
+    "rootDir, dan tsc menolaknya pada konfigurasi yang meng-emit (TS6059).",
+    "",
+    "Karena itu skrip dikeluarkan dari tsconfig.json yang membangun dist/, lalu diperiksa",
+    "di sini dengan noEmit dan tanpa rootDir. Tanpa berkas ini, bootstrap-admin.ts dan",
+    "generate-seed.ts tidak pernah diperiksa tipe sama sekali, dan galatnya baru muncul",
+    "saat pemilik proyek menjalankannya, yaitu saat yang paling buruk."
+  ],
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../..",
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.ts", "src/**/*.ts"]
+}

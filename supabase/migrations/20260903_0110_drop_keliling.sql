@@ -1,0 +1,21 @@
+-- Membuang armada dan jadwal keliling dari skema.
+--
+-- ALASANNYA, dan ini diputuskan pemilik proyek setelah melihat panelnya:
+-- seksi Keliling di situs HANYA menampilkan menu armada, logo, dan satu baris
+-- "jadwal titik henti menyusul". Tidak ada jumlah armada, tidak ada lokasi,
+-- tidak ada jadwal. Jadi kedua tabel ini beserta halaman panelnya mengelola
+-- data yang tidak pernah dilihat satu pengunjung pun.
+--
+-- Penggantinya bukan tabel baru. Isi menu Keliling sudah punya tempatnya
+-- sendiri sejak awal, yaitu `product_channel` dengan channel 'keliling', dan
+-- itulah yang kini dikelola halaman /keliling di panel.
+--
+-- URUTANNYA PENTING: keliling_schedule punya foreign key ke keliling_unit,
+-- jadi anaknya lebih dulu. `if exists` dipakai supaya migrasi ini tetap aman
+-- dijalankan pada basis data yang belum pernah punya kedua tabel itu.
+--
+-- TIDAK BISA DIBATALKAN. Kalau suatu saat blok jadwal Keliling benar-benar
+-- dibutuhkan di situs, ia dibangun ulang lewat migrasi baru, bukan dipulihkan.
+-- Definisi aslinya masih bisa dibaca di 20260902_0120_places.sql.
+drop table if exists public.keliling_schedule;
+drop table if exists public.keliling_unit;
