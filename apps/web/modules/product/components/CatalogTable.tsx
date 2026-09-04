@@ -4,26 +4,25 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AdminShell } from "@/modules/admin/components/AdminShell";
-import { ProductFormDrawer } from "@/modules/product/components/ProductFormDrawer";
-import type { ProductDetail, ProductListItem } from "@/modules/product/contracts/product";
-import { useDeleteProduct, useProductDetail, useProductList } from "@/modules/product/hooks/useProducts";
 import { ConfirmDialog } from "@/shared/components/ConfirmDialog";
 import { DataTable, type Column } from "@/shared/components/DataTable";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import { ApiError } from "@/shared/lib/api-client";
 
+import type { ProductListItem } from "../contracts/product";
+import { useDeleteProduct, useProductList } from "../hooks/useProducts";
+
 /**
- * Kelola produk: tabel CRUD.
+ * Tabel katalog, dipakai /menu dan /ecommerce.
  *
- * Halaman ini berpasangan dengan /product, dan pembagiannya disengaja.
- * /product adalah katalog untuk MELIHAT, dengan kartu dan laci bawah.
- * Halaman ini untuk MENGUBAH, dengan tabel dan laci kanan. Keduanya memakai
- * cache TanStack yang sama, jadi menyimpan di sini langsung terlihat di sana.
+ * Keduanya membaca endpoint yang sama dengan saring `ecommerce` yang berbeda,
+ * dan menampilkan kolom yang hampir sama. Yang berbeda hanya satu kolom:
+ * halaman ecommerce menampilkan penanda tautan toko, halaman menu tidak, karena
+ * menu memang tidak punya tautan toko sama sekali.
  *
  * Pencariannya ber-debounce 320ms dan didukung indeks GIN trigram di basis
- * data. Halamannya kembali ke 1 setiap kata kunci berubah, kalau tidak
- * pengguna bisa terdampar di halaman 4 dari hasil yang cuma punya satu halaman.
+ * data. Halamannya kembali ke 1 setiap kata kunci berubah, kalau tidak pengguna
+ * bisa terdampar di halaman 4 dari hasil yang cuma punya satu halaman.
  */
 const rupiah = (value: number | null, note: string | null) => {
   if (note) return note;
@@ -31,17 +30,32 @@ const rupiah = (value: number | null, note: string | null) => {
   return `Rp ${value.toLocaleString("id-ID")}`;
 };
 
-export default function ManagementProductPage() {
+export function CatalogTable({
+  ecommerce,
+  emptyLabel,
+  searchPlaceholder,
+  addLabel,
+  onAdd,
+  onEdit,
+}: {
+  ecommerce: boolean;
+  emptyLabel: string;
+  searchPlaceholder: string;
+  addLabel: string;
+  onAdd: () => void;
+  onEdit: (id: string) => void;
+}) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const debounced = useDebounce(search);
-
-  const [editing, setEditing] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
   const [removing, setRemoving] = useState<ProductListItem | null>(null);
 
-  const list = useProductList({ page, perPage: 20, q: debounced || undefined });
-  const detail = useProductDetail(editing);
+  const list = useProductList({
+    page,
+    perPage: 20,
+    q: debounced || undefined,
+    ecommerce,
+  });
   const remove = useDeleteProduct();
 
   const columns: Column<ProductListItem>[] = [
@@ -53,16 +67,50 @@ export default function ManagementProductPage() {
         <div>
           <strong>{row.title}</strong>
           {row.isSoldOut ? (
-            /* Habis dibawa DUA penanda, teks dan coretan, tidak pernah warna
+            /* Habis dibawa DUA penanda, teks dan lencana, tidak pernah warna
                saja. Aturan aksesibilitas yang sama dengan menu di situs. */
             <span className="adm-badge" data-tone="danger" style={{ marginLeft: 8 }}>
               Habis
             </span>
           ) : null}
+          {row.isFavourite ? (
+            <span className="adm-badge" data-tone="accent" style={{ marginLeft: 8 }}>
+              Favorit
+            </span>
+          ) : null}
         </div>
       ),
     },
-    { key: "price", header: "Harga", numeric: true, render: (row) => rupiah(row.basePrice, row.priceNote) },
+    ...(ecommerce
+      ? []
+      : [
+          {
+            key: "category",
+            header: "Kategori",
+            width: "150px",
+            /* KOLOM INI ADA UNTUK SATU ALASAN. Menu di situs dikelompokkan
+               menurut kategori, dan kartunya ADALAH kategorinya. Item tanpa
+               kategori karena itu tidak punya kartu untuk ditempati dan tidak
+               akan tampil sama sekali. Tanpa penanda di sini, satu-satunya
+               gejalanya adalah item yang hilang dari situs tanpa penjelasan. */
+            render: (row: ProductListItem) =>
+              row.categorySlug ? (
+                <span className="adm-badge" data-tone="muted">
+                  {row.categorySlug}
+                </span>
+              ) : (
+                <span className="adm-badge" data-tone="warn">
+                  Tanpa kategori, tidak tampil
+                </span>
+              ),
+          } as Column<ProductListItem>,
+        ]),
+    {
+      key: "price",
+      header: "Harga",
+      numeric: true,
+      render: (row) => rupiah(row.basePrice, row.priceNote),
+    },
     {
       key: "status",
       header: "Status",
@@ -76,21 +124,31 @@ export default function ManagementProductPage() {
         </span>
       ),
     },
-    {
-      key: "ecommerce",
-      header: "Ecommerce",
-      width: "110px",
-      render: (row) =>
-        row.isEcommerce ? (
-          <span className="adm-badge" data-tone="accent">
-            Ya
-          </span>
-        ) : (
-          <span className="adm-badge" data-tone="muted">
-            Tidak
-          </span>
-        ),
-    },
+    ...(ecommerce
+      ? [
+          {
+            key: "links",
+            header: "Tautan toko",
+            width: "150px",
+            render: (row: ProductListItem) => {
+              const count = row.marketplaceLinks.length;
+              /* Angka DAN kata, bukan sekadar lencana berwarna. Nol tautan
+                 berarti tombol di situs tampil tapi tidak menavigasi ke mana
+                 pun, dan itu perlu terbaca sebagai keadaan, bukan disimpulkan
+                 dari warna abu-abu. */
+              return count === 0 ? (
+                <span className="adm-badge" data-tone="warn">
+                  Belum ada
+                </span>
+              ) : (
+                <span className="adm-badge" data-tone="ok">
+                  {count} dari 2
+                </span>
+              );
+            },
+          } as Column<ProductListItem>,
+        ]
+      : []),
     {
       key: "actions",
       header: "",
@@ -105,7 +163,7 @@ export default function ManagementProductPage() {
             aria-label={`Ubah ${row.title}`}
             onClick={(event) => {
               event.stopPropagation();
-              setEditing(row.id);
+              onEdit(row.id);
             }}
           >
             <Pencil size={15} aria-hidden="true" />
@@ -129,40 +187,29 @@ export default function ManagementProductPage() {
   ];
 
   return (
-    <AdminShell>
+    <>
       <DataTable
         columns={columns}
         rows={list.data?.data ?? []}
         loading={list.isLoading}
-        emptyLabel={debounced ? "Tidak ada produk yang cocok." : "Belum ada produk."}
+        emptyLabel={debounced ? "Tidak ada yang cocok." : emptyLabel}
         search={search}
         onSearch={(value) => {
           setSearch(value);
           setPage(1);
         }}
-        searchPlaceholder="Cari judul produk..."
+        searchPlaceholder={searchPlaceholder}
         toolbar={
-          <button
-            type="button"
-            className="adm-btn"
-            data-variant="primary"
-            onClick={() => setCreating(true)}
-          >
+          <button type="button" className="adm-btn" data-variant="primary" onClick={onAdd}>
             <Plus size={15} aria-hidden="true" />
-            Tambah produk
+            {addLabel}
           </button>
         }
         page={page}
         totalPages={list.data?.meta.totalPages ?? 1}
         total={list.data?.meta.total ?? 0}
         onPage={setPage}
-      />
-
-      <ProductFormDrawer open={creating} product={null} onClose={() => setCreating(false)} />
-      <ProductFormDrawer
-        open={Boolean(editing)}
-        product={(detail.data as ProductDetail | undefined) ?? null}
-        onClose={() => setEditing(null)}
+        onRowClick={(row) => onEdit(row.id)}
       />
 
       {/* Konfirmasi hapus: satu keputusan, jadi dialog, bukan laci. Fokus awal
@@ -170,12 +217,17 @@ export default function ManagementProductPage() {
           menghapus apa pun. */}
       <ConfirmDialog
         open={Boolean(removing)}
-        title="Hapus produk ini?"
+        title="Hapus item ini?"
         description={removing ? `${removing.sku} ${removing.title}` : undefined}
         onClose={() => setRemoving(null)}
         footer={
           <>
-            <button type="button" className="adm-btn" data-autofocus onClick={() => setRemoving(null)}>
+            <button
+              type="button"
+              className="adm-btn"
+              data-autofocus
+              onClick={() => setRemoving(null)}
+            >
               Batal
             </button>
             <button
@@ -187,7 +239,7 @@ export default function ManagementProductPage() {
                 if (!removing) return;
                 remove.mutate(removing.id, {
                   onSuccess: () => {
-                    toast.success("Produk dihapus.");
+                    toast.success("Item dihapus.");
                     setRemoving(null);
                   },
                   onError: (error) =>
@@ -201,10 +253,10 @@ export default function ManagementProductPage() {
         }
       >
         <p style={{ margin: 0, fontSize: "0.86rem", lineHeight: 1.6 }}>
-          Terjemahan, varian, kanal, dan tautan marketplace produk ini ikut terhapus. Tindakan ini
+          Terjemahan, varian, kanal, dan tautan marketplace item ini ikut terhapus. Tindakan ini
           tidak bisa dibatalkan.
         </p>
       </ConfirmDialog>
-    </AdminShell>
+    </>
   );
 }

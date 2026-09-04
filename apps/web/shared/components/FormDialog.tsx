@@ -4,22 +4,25 @@ import { ArrowLeft } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
- * Laci kanan untuk form BERMEDAN BANYAK.
+ * Modal untuk form yang LEBIH DARI TIGA MEDAN.
  *
- * Aturan produk soal bentuk input, dan ia spesifik:
- *   sampai 3 medan          -> dialog, lihat ConfirmDialog
- *   medan banyak            -> laci dari kanan ke kiri, berhenti di batas
- *                              sidebar pada desktop
- *   melihat detail banyak   -> laci dari bawah ke atas, tinggi 85 persen
+ * KENAPA KOMPONEN BARU, BUKAN ConfirmDialog YANG DILEBARKAN. Aturan produk
+ * membagi bentuk menurut jumlah medan: sampai tiga medan pakai dialog, lebih
+ * dari itu pakai FormDrawer. Halaman Timeline diminta pemilik proyek memakai
+ * MODAL secara eksplisit, sementara isinya lima medan, jadi ia tidak muat di
+ * kedua bentuk yang sudah ada.
  *
- * TOMBOL IKON PANAH KIRI DI KIRI ATAS. Diklik, laci menutup dan tertarik
- * kembali ke kanan. Berlaku sama untuk mode tambah maupun edit, jadi komponen
- * ini tidak punya varian untuk keduanya.
+ * Menjejalkannya ke ConfirmDialog berarti diam-diam melanggar batas tiga medan
+ * yang ditulis di komponen itu sendiri, dan sesi berikutnya akan membaca
+ * komentarnya lalu percaya batas itu masih berlaku. Menambah satu bentuk yang
+ * jujur menyebut dirinya lebih baik daripada melunakkan aturan yang sudah ada.
  *
- * Batas sidebar diurus CSS lewat `left: 248px`, dan runtuh jadi `left: 0` di
- * bawah 1023px karena di sana sidebarnya memang tidak menempati ruang.
+ * Perbedaannya dengan ConfirmDialog hanya tiga: lebih lebar, badannya bisa
+ * digulir saat layarnya pendek, dan fokus awal mendarat di MEDAN PERTAMA, bukan
+ * di tombol batal. Yang terakhir disengaja: dialog konfirmasi menahan tangan
+ * pemakai, form justru harus siap diketik.
  */
-export function FormDrawer({
+export function FormDialog({
   open,
   title,
   description,
@@ -66,7 +69,6 @@ export function FormDrawer({
 
   useEffect(() => {
     if (!open) return;
-
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -75,14 +77,17 @@ export function FormDrawer({
         closeRef.current();
         return;
       }
-      if (event.key !== "Tab") return;
 
-      const focusables = panelRef.current?.querySelectorAll<HTMLElement>(
+      /* Jebakan fokus. Tanpa ini, Tab dari medan terakhir keluar ke halaman di
+         belakang modal, dan pemakai keyboard mengetik ke dalam form yang tidak
+         bisa mereka lihat. */
+      if (event.key !== "Tab") return;
+      const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
         'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
       );
-      if (!focusables?.length) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
+      if (!focusable || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
@@ -93,10 +98,7 @@ export function FormDrawer({
     };
 
     document.addEventListener("keydown", onKeyDown);
-    /* Fokus mendarat di tombol tutup, bukan di medan pertama. Pengguna pembaca
-       layar jadi mendengar judul lacinya lebih dulu, dan jalan keluarnya selalu
-       satu Tab dari titik awal. */
-    panelRef.current?.querySelector<HTMLElement>("button")?.focus();
+    panelRef.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
 
     return () => {
       document.body.style.overflow = previous;
@@ -110,7 +112,8 @@ export function FormDrawer({
     <>
       <div className="adm-scrim-fixed" onClick={onClose} aria-hidden="true" />
       <div
-        className="adm-drawer-right"
+        className="adm-dialog"
+        data-wide="true"
         ref={panelRef}
         role="dialog"
         aria-modal="true"
@@ -123,17 +126,16 @@ export function FormDrawer({
             data-variant="ghost"
             data-icon="true"
             onClick={onClose}
-            aria-label="Tutup dan kembali"
+            aria-label="Tutup"
           >
-            <ArrowLeft size={18} aria-hidden="true" />
+            <ArrowLeft size={17} aria-hidden="true" />
           </button>
           <div>
             <h2>{title}</h2>
             {description ? <p>{description}</p> : null}
           </div>
         </div>
-
-        <div className="adm-drawer-body">{children}</div>
+        <div className="adm-dialog-body">{children}</div>
         {footer ? <div className="adm-drawer-foot">{footer}</div> : null}
       </div>
     </>

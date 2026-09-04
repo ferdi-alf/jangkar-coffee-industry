@@ -8,7 +8,10 @@ import { api } from "@/shared/lib/api-client";
 export interface ContentField {
   id: string;
   key: string;
-  kind: "text" | "longtext" | "list";
+  /* `image` menyimpan URL gambar, sama seperti di apps/api. Nilainya sama di
+     kedua bahasa karena URL gambar tidak bergantung bahasa; editor konten
+     yang menjaga keduanya sinkron. */
+  kind: "text" | "longtext" | "list" | "image";
   sortOrder: number;
   values: Record<"id" | "en", string>;
 }

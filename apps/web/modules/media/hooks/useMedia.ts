@@ -49,16 +49,38 @@ export function useUploadMedia() {
       const form = new FormData();
       form.append("file", file);
       form.append("alt", JSON.stringify(alt));
-      return api.post<{ id: string }>("/media", form);
+      /* Server mengembalikan item UTUH, termasuk `url`. Itu yang dibutuhkan
+         form: nilai yang disimpan ke product.image_path dan ke medan gambar SEO
+         adalah URL publiknya, bukan idnya. */
+      return api.post<MediaItem>("/media", form);
     },
     onSuccess: invalidate,
   });
 }
 
+/**
+ * Menghapus media, dari id ATAU dari URL publiknya.
+ *
+ * Varian URL dipakai saat gambar di form diganti. Kolom tujuannya hanya
+ * menyimpan URL, bukan id, karena kolom yang sama juga harus bisa berisi jalur
+ * statis lama seperti `/roastery/kopi-bubuk-80gr.webp`. URL yang bukan milik
+ * storage kita dijawab server dengan `deleted: false` dan bukan galat, jadi
+ * melepas gambar lama tidak pernah menggagalkan penyimpanan form.
+ */
 export function useDeleteMedia() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: (id: string) => api.remove<{ id: string }>(`/media/${id}`),
+    /* Kembaliannya diseragamkan jadi `{ deleted: boolean }`. Kedua endpoint
+       memulangkan bentuk yang berbeda, dan membiarkan tipenya berupa gabungan
+       memaksa setiap pemanggil menebak yang mana yang ia dapat padahal tidak
+       satu pun memakainya. */
+    mutationFn: async (target: { id: string } | { url: string }): Promise<{ deleted: boolean }> => {
+      if ("id" in target) {
+        await api.remove<{ id: string }>(`/media/${target.id}`);
+        return { deleted: true };
+      }
+      return api.remove<{ deleted: boolean }>(`/media?url=${encodeURIComponent(target.url)}`);
+    },
     onSuccess: invalidate,
   });
 }

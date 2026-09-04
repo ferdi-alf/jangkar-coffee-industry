@@ -39,4 +39,19 @@ export const qk = {
     all: ["contact"] as const,
     list: (params: Record<string, unknown>) => ["contact", "list", params] as const,
   },
+  settings: {
+    all: ["settings"] as const,
+    seo: ["settings", "seo"] as const,
+    contact: ["settings", "contact"] as const,
+    social: ["settings", "social"] as const,
+  },
+  timeline: {
+    all: ["timeline"] as const,
+    list: ["timeline", "list"] as const,
+  },
+  user: {
+    all: ["user"] as const,
+    list: ["user", "list"] as const,
+    me: ["user", "me"] as const,
+  },
 } as const;

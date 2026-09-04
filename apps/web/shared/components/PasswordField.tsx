@@ -17,8 +17,17 @@ export function PasswordField({
   id,
   label,
   error,
+  hint,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & { id: string; label: string; error?: string }) {
+}: InputHTMLAttributes<HTMLInputElement> & {
+  id: string;
+  label: string;
+  error?: string;
+  /* Sama seperti TextField. Ada karena aturan kata sandi, misalnya "minimal 12
+     karakter", harus terbaca SEBELUM diketik, bukan muncul sebagai galat merah
+     setelah percobaan gagal. */
+  hint?: string;
+}) {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -31,7 +40,11 @@ export function PasswordField({
           className="adm-input"
           type={visible ? "text" : "password"}
           aria-invalid={error ? "true" : undefined}
-          aria-describedby={error ? `${id}-error` : undefined}
+          /* Petunjuk ikut ditunjuk aria-describedby, jadi pembaca layar
+             mengumumkan aturannya juga, bukan cuma galatnya. */
+          aria-describedby={
+            error ? `${id}-error` : hint ? `${id}-hint` : undefined
+          }
         />
         <button
           type="button"
@@ -45,6 +58,10 @@ export function PasswordField({
       {error ? (
         <p className="adm-error" id={`${id}-error`}>
           {error}
+        </p>
+      ) : hint ? (
+        <p className="adm-hint" id={`${id}-hint`}>
+          {hint}
         </p>
       ) : null}
     </div>

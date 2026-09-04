@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { AdminShell } from "@/modules/admin/components/AdminShell";
 import { useContentSections, useSaveContent, type ContentSection } from "@/modules/content/hooks/useContent";
 import { LocaleTabs } from "@/shared/components/LocaleTabs";
+import { MediaUploadField } from "@/shared/components/MediaUploadField";
 import { ApiError } from "@/shared/lib/api-client";
 
 /**
@@ -64,8 +65,19 @@ function SectionEditor({
     setDraft((previous) => ({ ...previous, [fieldId]: { ...previous[fieldId], [locale]: value } }));
   }
 
+  /* Medan gambar TIDAK ikut di tab bahasa. URL gambar tidak bergantung bahasa,
+     jadi menampilkannya dua kali hanya mengundang kedua nilainya jadi berbeda.
+     Ia dirender sekali di blok bawah, dan penyimpanannya menulis ke kedua
+     bahasa sekaligus. */
+  const textFields = section.fields.filter((field) => field.kind !== "image");
+  const imageFields = section.fields.filter((field) => field.kind === "image");
+
+  function setImage(fieldId: string, url: string): void {
+    setDraft((previous) => ({ ...previous, [fieldId]: { id: url, en: url } }));
+  }
+
   function renderFields(locale: "id" | "en") {
-    return section.fields.map((field) => {
+    return textFields.map((field) => {
       const id = `content-${field.id}-${locale}`;
       const value = draft[field.id]?.[locale] ?? "";
       const label = `${field.key} (${locale === "id" ? "Indonesia" : "English"})`;
@@ -117,7 +129,26 @@ function SectionEditor({
         </div>
       </div>
       <div className="adm-card-body">
-        <LocaleTabs id={<>{renderFields("id")}</>} en={<>{renderFields("en")}</>} />
+        <LocaleTabs
+          id={<>{renderFields("id")}</>}
+          en={<>{renderFields("en")}</>}
+          shared={
+            imageFields.length > 0 ? (
+              <>
+                {imageFields.map((field) => (
+                  <MediaUploadField
+                    key={field.id}
+                    label={field.key}
+                    hint="Berlaku untuk kedua bahasa."
+                    value={draft[field.id]?.id || null}
+                    onChange={(url) => setImage(field.id, url ?? "")}
+                  />
+                ))}
+              </>
+            ) : undefined
+          }
+          sharedLabel="Gambar"
+        />
       </div>
     </div>
   );

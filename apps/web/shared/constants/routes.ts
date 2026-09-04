@@ -7,16 +7,29 @@
  *
  * Menambah rute admin berarti menambah satu entri DI SINI, bukan menyebar
  * kondisi ke banyak berkas. Aturan ini dari PROJECT-SPEC.
+ *
+ * Perubahan 2026-09-03, atas permintaan pemilik proyek:
+ *   - `product` DIHAPUS. Halaman kartu baca-saja itu menampilkan katalog yang
+ *     sekarang sudah punya halamannya masing-masing per tabel.
+ *   - `media` DIHAPUS. Pustaka media berdiri sendiri tanpa pernah dipakai satu
+ *     form pun; gambar sekarang diunggah langsung di form yang membutuhkannya.
+ *   - `management-product` menjadi `menu`, dan `ecommerce` lahir sebagai
+ *     pasangannya, karena menu outlet dan barang yang dijual di marketplace
+ *     memang dua hal berbeda.
  */
 export const ADMIN_ROUTES = [
   "dashboard",
-  "product",
-  "management-product",
+  "menu",
+  "ecommerce",
+  "keliling",
   "category",
   "outlet",
-  "keliling",
   "content",
-  "media",
+  "timeline",
+  "seo",
+  "kontak",
+  "profil",
+  "pengguna",
   "pesan",
   "login",
 ] as const;

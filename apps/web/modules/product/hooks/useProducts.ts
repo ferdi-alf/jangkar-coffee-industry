@@ -17,12 +17,21 @@ export interface ProductListParams {
   channel?: "outlet" | "keliling";
 }
 
-export function useProductList(params: ProductListParams) {
+/**
+ * `enabled` ada untuk dialog impor menu keliling.
+ *
+ * Dialog itu harus benar-benar TIDAK MENEMBAK APA PUN sebelum ada yang
+ * diketik, bukan sekadar menyembunyikan hasilnya. Tanpa sakelar ini, membuka
+ * dialog akan menarik 20 produk pertama yang tidak pernah ditampilkan, dan
+ * permintaan yang tidak menghasilkan apa-apa tetap dibayar penggunanya.
+ */
+export function useProductList(params: ProductListParams, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: qk.product.list(params as unknown as Record<string, unknown>),
     queryFn: () =>
       api.list<ProductListItem>(`/products${listQuery({ ...params, locale: "id" })}`),
     placeholderData: (previous) => previous,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -109,8 +118,16 @@ export function useDeleteProduct() {
 export function useSetChannel() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: ({ id, channel, available }: { id: string; channel: "outlet" | "keliling"; available: boolean }) =>
-      api.patch<{ id: string }>(`/products/${id}/channels`, { channels: [{ channel, available }] }),
+    /* Menerima DAFTAR kanal, bukan satu kanal, karena endpointnya memang
+       menulis ulang seluruh daftar sekaligus. Pemanggil yang hanya mengubah
+       satu kanal tetap cukup mengirim satu unsur. */
+    mutationFn: ({
+      id,
+      channels,
+    }: {
+      id: string;
+      channels: { channel: "outlet" | "keliling"; available: boolean }[];
+    }) => api.patch<{ id: string }>(`/products/${id}/channels`, { channels }),
     onSuccess: invalidate,
   });
 }

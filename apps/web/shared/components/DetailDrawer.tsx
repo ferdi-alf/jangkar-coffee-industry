@@ -49,6 +49,34 @@ function DetailDrawerPanel({
   children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * `onClose` DIPEGANG LEWAT REF, dan itu memperbaiki bug nyata.
+   *
+   * Sebelumnya effect di bawah bergantung pada `onClose`, sementara SELURUH
+   * pemanggil mengirimnya sebagai arrow inline (`onClose={() => setX(false)}`)
+   * yang identitasnya baru pada setiap render induk. Akibatnya: setiap kali
+   * induk render ulang, entah karena kueri TanStack selesai atau state lain
+   * berubah, effect dibersihkan lalu dijalankan lagi, dan baris terakhirnya
+   * MEREBUT FOKUS ke tombol pertama. Pemakai yang sedang mengetik tiba-tiba
+   * kehilangan fokus dan mendarat di tombol.
+   *
+   * Terukur di peramban sungguhan: mengetik di medan tahun akhir pada modal
+   * Timeline melompatkan fokus kembali ke medan tahun, dengan tepat satu
+   * panggilan `.focus()` dari kode.
+   *
+   * Dengan ref, effect hanya bergantung pada `open`, jadi ia berjalan tepat
+   * sekali saat dibuka. Tidak ada satu pun pemanggil yang perlu diubah.
+   */
+  const closeRef = useRef(onClose);
+  /* Disegarkan lewat EFFECT, bukan saat render. Menulis ke ref selama render
+     dilarang aturan lint React dan memang bisa salah pada render yang
+     dibuang. Effect ini murah dan tidak pernah memicu effect utama di bawah,
+     karena effect itu hanya bergantung pada `open`. */
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
   const startY = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
 
@@ -56,7 +84,7 @@ function DetailDrawerPanel({
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") closeRef.current();
     };
     document.addEventListener("keydown", onKeyDown);
     panelRef.current?.querySelector<HTMLElement>("button")?.focus();
@@ -64,7 +92,7 @@ function DetailDrawerPanel({
       document.body.style.overflow = previous;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <>

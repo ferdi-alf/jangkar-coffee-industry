@@ -11,8 +11,9 @@ import { Toaster } from "sonner";
  * sekali per proses, jadi klien di ruang modul akan dibagi antar permintaan di
  * server dan data satu pengguna bisa terlihat oleh pengguna lain.
  *
- * TOAST DI KIRI ATAS. Aturan produk, dan ia memang disebut posisinya secara
- * eksplisit, jadi jangan diubah ke bawaan sonner yang di kanan bawah.
+ * TOAST DI KANAN ATAS. Posisi ini diminta pemilik proyek secara eksplisit pada
+ * 2026-09-03, menggantikan kiri atas yang dipakai sebelumnya. Bawaan sonner
+ * adalah kanan BAWAH, jadi nilainya tetap harus ditulis, bukan dihapus.
  */
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -35,7 +36,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       {children}
       <Toaster
-        position="top-left"
+        position="top-right"
         richColors
         closeButton
         toastOptions={{ style: { fontFamily: "var(--font-sans), system-ui, sans-serif" } }}

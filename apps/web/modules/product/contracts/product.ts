@@ -50,11 +50,23 @@ export interface ProductDetail extends ProductListItem {
   audit?: { createdAt: string; updatedAt: string };
 }
 
-/** Bentuk yang dikirim saat menyimpan. */
+/**
+ * Bentuk yang dikirim saat menyimpan.
+ *
+ * `slug` TIDAK ADA DI SINI LAGI. Server yang membuatnya dari judul Indonesia
+ * saat produk dibuat, lalu menguncinya: pada update, slug yang dikirim justru
+ * dibuang. Lihat apps/api/src/shared/utils/slug.ts untuk alasannya, yang
+ * intinya `category.slug` dipakai sebagai aturan tampilan menu keliling.
+ *
+ * `image` berisi URL PENUH ke objek publik di Supabase Storage untuk gambar
+ * yang diunggah lewat panel, atau jalur statis lama seperti
+ * `/roastery/kopi-bubuk-80gr.webp` untuk data sebelum panel ada. Kolomnya
+ * memang teks bebas, jadi keduanya hidup berdampingan tanpa migrasi.
+ */
 export interface ProductPayload {
   sku: string;
-  slug: string;
   categoryId: string | null;
+  image: string | null;
   basePrice: number | null;
   priceNote: string | null;
   isSignature: boolean;
@@ -65,6 +77,13 @@ export interface ProductPayload {
   sortOrder: number;
   translations: Record<"id" | "en", { title: string; description: string | null }>;
   marketplaceLinks: { marketplace: Marketplace; url: string }[];
+  /**
+   * HANYA dikirim saat MEMBUAT. Pada update ia sengaja dihilangkan, karena
+   * server menulis ulang seluruh daftar kanal setiap kali medan ini ada.
+   * Mengirimnya dari form menu akan diam-diam mencabut item dari menu keliling
+   * setiap kali harganya disunting.
+   */
+  channels?: { channel: Channel; available: boolean }[];
 }
 
 /** Kode galat dari zod di server, dipetakan ke kalimat Indonesia di sini. */

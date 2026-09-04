@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Boxes, Coffee, MailOpen, MapPin } from "lucide-react";
+import { Boxes, Coffee, Globe2, MailOpen } from "lucide-react";
 import {
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -16,6 +17,8 @@ import {
 } from "recharts";
 
 import { AdminShell } from "@/modules/admin/components/AdminShell";
+import { countryName } from "@/modules/admin/constants/country-centroids";
+import { VisitorMap } from "@/modules/admin/components/VisitorMap";
 import { ChartCard } from "@/shared/components/ChartCard";
 import { StatCard } from "@/shared/components/StatCard";
 import { qk } from "@/shared/constants/query-keys";
@@ -26,12 +29,17 @@ import { api } from "@/shared/lib/api-client";
  *
  * SETIAP ANGKA DI HALAMAN INI BERASAL DARI DATA YANG BENAR-BENAR ADA.
  *
- * Tidak ada grafik pendapatan, tidak ada trafik, tidak ada konversi. Jangkar
- * tidak menjual lewat situs ini, jadi tidak ada satu pun transaksi yang tercatat
- * di basis datanya, dan grafik penjualan di sini hanya akan jadi angka karangan
- * yang terlihat meyakinkan. Yang ditampilkan: pesan kontak yang benar-benar
- * masuk, kelengkapan terjemahan yang benar-benar bisa dihitung, dan cakupan
- * jadwal keliling yang benar-benar diisi.
+ * Tidak ada grafik pendapatan dan tidak ada konversi. Jangkar tidak menjual
+ * lewat situs ini, jadi tidak ada satu pun transaksi yang tercatat di basis
+ * datanya, dan grafik penjualan di sini hanya akan jadi angka karangan yang
+ * terlihat meyakinkan.
+ *
+ * KUNJUNGAN SITUS KINI ADA, dan ia menggantikan grafik pesan kontak masuk atas
+ * permintaan pemilik proyek. Angkanya nyata: satu baris dicatat middleware
+ * apps/web untuk setiap muat halaman, dengan negara dari header geo Vercel.
+ * Dua batasnya harus diingat siapa pun yang membacanya, dan keduanya ditulis
+ * di keterangan kartunya sendiri: ia menghitung MUAT HALAMAN bukan manusia,
+ * dan kunjungan tanpa negara adalah keadaan normal, bukan galat.
  *
  * KELENGKAPAN TERJEMAHAN adalah metrik yang paling berguna di sini. Situsnya
  * dua bahasa, dan medan yang tertinggal di satu bahasa adalah lubang yang tidak
@@ -57,7 +65,8 @@ interface Overview {
     contactNew: number;
     contactTotal: number;
   };
-  contactByDay: { date: string; count: number }[];
+  visitsByDay: { date: string; visits: number; uniques: number }[];
+  visitsByCountry: { country: string | null; visits: number; uniques: number }[];
   translation: { entity: string; total: number; id: number; en: number }[];
   channelCounts: { channel: string; count: number }[];
   recentAudit: { action: string; entity: string; summary: string | null; at: string; actor: string | null }[];
@@ -108,20 +117,26 @@ export default function DashboardPage() {
           icon={Boxes}
         />
         <StatCard
-          label="Outlet"
-          value={isLoading ? "..." : data?.counts.outlets ?? 0}
-          note={`${data?.channelCounts.find((c) => c.channel === "keliling")?.count ?? 0} item di menu armada`}
-          icon={MapPin}
+          label="Kunjungan 30 hari"
+          value={isLoading ? "..." : (data?.visitsByDay ?? []).reduce((sum, d) => sum + d.visits, 0)}
+          note={`${data?.visitsByCountry.length ?? 0} negara tercatat`}
+          icon={Globe2}
         />
       </div>
 
-      <div className="adm-row" data-split="1">
+      {/* 70 banding 30, diminta pemilik proyek: grafik kunjungan di kiri, peta
+          dunia di kanan. Variannya baru di admin.css, yang ada sebelumnya hanya
+          30 banding 70. */}
+      <div className="adm-row" data-split="70-30">
         <ChartCard
-          title="Pesan kontak masuk"
-          description="30 hari terakhir, dari form kontak beranda."
+          title="Kunjungan situs"
+          description="30 hari terakhir. Menghitung muat halaman, bukan orang, jadi bot ikut terhitung."
         >
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data?.contactByDay ?? []} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+            <LineChart
+              data={data?.visitsByDay ?? []}
+              margin={{ top: 8, right: 8, bottom: 0, left: -18 }}
+            >
               <CartesianGrid stroke="#E4E6EA" vertical={false} />
               <XAxis
                 dataKey="date"
@@ -139,28 +154,72 @@ export default function DashboardPage() {
               />
               <Tooltip
                 labelFormatter={(value) => `Tanggal ${value}`}
-                formatter={(value) => [`${Number(value ?? 0)} pesan`, ""]}
+                formatter={(value, name) => [
+                  `${Number(value ?? 0)}`,
+                  name === "uniques" ? "Pengunjung berbeda" : "Kunjungan",
+                ]}
                 contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #E4E6EA" }}
               />
-              {/* `linear`, BUKAN `monotone`. Terlihat di screenshot: spline
-                  monotone melengkung sampai DI BAWAH NOL di antara dua titik,
-                  dan cacah pesan tidak bisa negatif. Kurva itu menggambar nilai
-                  yang mustahil, dan grafik yang berbohong sedikit lebih buruk
-                  daripada grafik yang kaku. Titiknya dimunculkan kembali karena
-                  garis lurus antar hari perlu penanda di mana datanya berada. */}
+              <Legend
+                formatter={(value) => (value === "uniques" ? "Pengunjung berbeda" : "Kunjungan")}
+                wrapperStyle={{ fontSize: 11 }}
+              />
+              {/* `linear`, BUKAN `monotone`. Terlihat di screenshot sebelumnya:
+                  spline monotone melengkung sampai DI BAWAH NOL di antara dua
+                  titik, dan cacah kunjungan tidak bisa negatif. Kurva itu
+                  menggambar nilai yang mustahil, dan grafik yang berbohong
+                  sedikit lebih buruk daripada grafik yang kaku. */}
               <Line
                 type="linear"
-                dataKey="count"
+                dataKey="visits"
                 stroke={GOLD}
                 strokeWidth={2}
                 dot={{ r: 2, fill: GOLD, strokeWidth: 0 }}
-                /* Animasi masuk dimatikan. Grafik ini di bawah lipatan pada
-                   layar kecil, dan gerak berulang di luar hero dilarang
-                   amandemen A2. */
+                isAnimationActive={false}
+              />
+              {/* Garis kedua: pengunjung berbeda per hari, dihitung dari hash
+                  bergaram yang berganti tiap tengah malam. Ia selalu di bawah
+                  atau sama dengan kunjungan, dan jarak antar keduanya persis
+                  menunjukkan berapa banyak yang membuka lebih dari sekali. */}
+              <Line
+                type="linear"
+                dataKey="uniques"
+                stroke={GOLD_SOFT}
+                strokeWidth={2}
+                strokeDasharray="4 3"
+                dot={{ r: 2, fill: GOLD_SOFT, strokeWidth: 0 }}
                 isAnimationActive={false}
               />
             </LineChart>
           </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard
+          title="Negara pengunjung"
+          description="30 hari terakhir, dari header geo Vercel."
+        >
+          {/* PETA PLUS DAFTAR, dan daftarnya bukan pelengkap. Ukuran lingkaran
+              tidak boleh jadi satu-satunya pembawa makna, dan lingkaran di peta
+              dunia memang mustahil dibandingkan dengan mata. Daftar bertuliskan
+              angka inilah yang benar-benar bisa dibaca, termasuk oleh pembaca
+              layar; petanya `aria-hidden`. */}
+          <div className="adm-geo">
+            <VisitorMap rows={data?.visitsByCountry ?? []} />
+            {(data?.visitsByCountry.length ?? 0) === 0 ? (
+              <p className="adm-empty" style={{ padding: "12px 0" }}>
+                Belum ada kunjungan tercatat.
+              </p>
+            ) : (
+              <ol className="adm-geo-list">
+                {(data?.visitsByCountry ?? []).slice(0, 6).map((row) => (
+                  <li key={row.country ?? "unknown"}>
+                    <span>{countryName(row.country)}</span>
+                    <b>{row.visits}</b>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
         </ChartCard>
       </div>
 

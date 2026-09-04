@@ -1,14 +1,73 @@
 "use client";
 
-import { LogOut, Menu, X } from "lucide-react";
+import { ChevronDown, LogOut, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useState, useSyncExternalStore, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { ADMIN_NAV, ADMIN_PAGE_TITLE } from "@/modules/admin/constants/nav";
 import { useSession } from "@/modules/admin/hooks/useSession";
 import { api } from "@/shared/lib/api-client";
+
+/** Kunci localStorage untuk grup sidebar yang sedang tertutup. */
+const NAV_CLOSED_KEY = "jangkar.nav.closed";
+
+/* Rujukan tetap untuk keadaan kosong. useSyncExternalStore membandingkan
+   snapshot dengan Object.is, jadi mengembalikan array baru tiap panggilan akan
+   membuat React menganggapnya selalu berubah dan render tanpa henti. */
+const EMPTY: string[] = [];
+
+/**
+ * Store kecil di atas localStorage.
+ *
+ * Snapshotnya di-cache dan hanya dibuat ulang saat isinya benar-benar berubah,
+ * karena `getSnapshot` dipanggil di setiap render dan harus stabil.
+ */
+const navClosedStore = {
+  cache: EMPTY as string[],
+  raw: null as string | null,
+  listeners: new Set<() => void>(),
+
+  subscribe(listener: () => void): () => void {
+    navClosedStore.listeners.add(listener);
+    return () => navClosedStore.listeners.delete(listener);
+  },
+
+  get(): string[] {
+    let raw: string | null = null;
+    try {
+      raw = window.localStorage.getItem(NAV_CLOSED_KEY);
+    } catch {
+      /* Mode privat dan setelan yang memblokir penyimpanan situs melempar di
+         sini. Sidebar yang selalu terbuka jauh lebih baik daripada panel yang
+         gagal render. */
+      return EMPTY;
+    }
+    if (raw === navClosedStore.raw) return navClosedStore.cache;
+    navClosedStore.raw = raw;
+    try {
+      navClosedStore.cache = raw ? (JSON.parse(raw) as string[]) : EMPTY;
+    } catch {
+      navClosedStore.cache = EMPTY;
+    }
+    return navClosedStore.cache;
+  },
+
+  toggle(key: string): void {
+    const current = navClosedStore.get();
+    const next = current.includes(key) ? current.filter((k) => k !== key) : [...current, key];
+    try {
+      window.localStorage.setItem(NAV_CLOSED_KEY, JSON.stringify(next));
+    } catch {
+      /* Gagal menyimpan tidak boleh berarti gagal membuka. Keadaannya tetap
+         diperbarui di memori, hanya tidak bertahan sampai muat berikutnya. */
+    }
+    navClosedStore.raw = JSON.stringify(next);
+    navClosedStore.cache = next;
+    for (const listener of navClosedStore.listeners) listener();
+  },
+};
 
 /**
  * Kerangka panel: sidebar, topbar, dan penjaga sesi di sisi klien.
@@ -31,6 +90,29 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, isLoading, unauthenticated } = useSession();
   const [open, setOpen] = useState(false);
+  const navId = useId();
+
+  /**
+   * Grup sidebar yang sedang TERTUTUP.
+   *
+   * Yang disimpan adalah daftar tertutup, bukan terbuka, dan itu punya satu
+   * sifat penting: grup baru yang ditambahkan nanti otomatis TERBUKA, karena
+   * kuncinya belum pernah tercatat di mana pun. Kalau yang disimpan daftar
+   * terbuka, tiap grup baru lahir tersembunyi bagi setiap pemakai lama dan
+   * tidak ada yang tahu ia sudah ada.
+   *
+   * `useSyncExternalStore`, BUKAN useState plus useEffect. localStorage tidak
+   * ada di server, jadi membacanya sebagai nilai awal useState akan membuat
+   * markup server dan klien berbeda; membacanya di dalam effect lalu setState
+   * memicu render bertingkat, yang memang ditolak lint proyek ini. Hook ini
+   * dibuat persis untuk keadaan itu: ia punya snapshot server sendiri, dan
+   * React yang mengurus penyelarasannya setelah hidrasi.
+   */
+  const closed = useSyncExternalStore(navClosedStore.subscribe, navClosedStore.get, () => EMPTY);
+
+  const toggleGroup = useCallback((key: string) => {
+    navClosedStore.toggle(key);
+  }, []);
 
   useEffect(() => {
     if (unauthenticated) router.replace("/login");
@@ -91,34 +173,67 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </span>
         </Link>
 
-        {groups.map((group) => (
-          <div key={group.label}>
-            <p className="adm-nav-label">{group.label}</p>
-            <nav>
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    className="adm-nav-item"
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    /* Menu mobile ditutup DI SINI, bukan lewat efek yang
-                       mengamati pathname. Efek itu adalah setState sinkron di
-                       dalam efek, yang memicu render bertingkat setiap kali
-                       halaman berpindah. Menutupnya di tempat kejadian lebih
-                       murah dan lebih jelas sebabnya. */
-                    onClick={() => setOpen(false)}
-                  >
-                    <Icon size={17} aria-hidden="true" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-        ))}
+        {groups.map((group) => {
+          const holdsActive = group.items.some((item) => item.href === pathname);
+          /* Grup yang memuat halaman aktif DIPAKSA TERBUKA, apa pun isi
+             localStorage. Tanpa ini, membuka /menu lewat tautan langsung atau
+             muat ulang akan menampilkan sidebar yang menyembunyikan halaman
+             yang sedang dibaca, dan tidak ada satu pun petunjuk di layar bahwa
+             ia ada di dalam grup yang tertutup. */
+          const expanded = !group.collapsible || holdsActive || !closed.includes(group.key);
+          const panelId = `${navId}-${group.key}`;
+
+          return (
+            <div key={group.key}>
+              {group.collapsible ? (
+                <button
+                  type="button"
+                  className="adm-nav-toggle"
+                  aria-expanded={expanded}
+                  aria-controls={panelId}
+                  onClick={() => toggleGroup(group.key)}
+                >
+                  <span className="adm-nav-label">{group.label}</span>
+                  <ChevronDown
+                    size={15}
+                    aria-hidden="true"
+                    className="adm-nav-chevron"
+                    data-open={expanded}
+                  />
+                </button>
+              ) : (
+                <p className="adm-nav-label">{group.label}</p>
+              )}
+
+              {/* `hidden`, bukan dilepas dari DOM. Tautan yang tetap ada
+                  membuat prefetch Next tetap bekerja, dan `hidden` sudah
+                  mengeluarkannya dari urutan tab maupun dari pembaca layar. */}
+              <nav id={panelId} hidden={!expanded}>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      className="adm-nav-item"
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      /* Menu mobile ditutup DI SINI, bukan lewat efek yang
+                         mengamati pathname. Efek itu adalah setState sinkron di
+                         dalam efek, yang memicu render bertingkat setiap kali
+                         halaman berpindah. Menutupnya di tempat kejadian lebih
+                         murah dan lebih jelas sebabnya. */
+                      onClick={() => setOpen(false)}
+                    >
+                      <Icon size={17} aria-hidden="true" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+          );
+        })}
 
         <div className="adm-side-foot">
           <div className="adm-user">

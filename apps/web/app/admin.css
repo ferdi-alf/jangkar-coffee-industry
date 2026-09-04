@@ -168,6 +168,42 @@
   text-transform: uppercase;
   color: var(--a-sidebar-muted);
 }
+
+/* Tombol grup yang bisa dibuka-tutup. Hanya satu grup yang memakainya, lihat
+   modules/admin/constants/nav.ts.
+
+   Ia TOMBOL SUNGGUHAN, bukan div ber-onClick, jadi keyboard, Enter, spasi, dan
+   pengumuman "tertutup" atau "terbuka" dari pembaca layar semuanya datang
+   gratis dari peramban. `aria-expanded` yang menyampaikan keadaannya; panah di
+   kanan hanya pengulangan visualnya, bukan satu-satunya pembawa makna. */
+.adm-nav-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  /* 44px, lantai sasaran sentuh yang sama dengan .adm-nav-item. */
+  min-height: 44px;
+  padding: 0 10px;
+  background: transparent;
+  border: none;
+  border-radius: var(--a-radius-sm);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.adm-nav-toggle:hover { background: var(--a-sidebar-2); }
+.adm-nav-toggle .adm-nav-label { margin: 0; }
+.adm-nav-chevron {
+  flex: none;
+  color: var(--a-sidebar-muted);
+  transition: transform 160ms var(--a-e);
+}
+.adm-nav-chevron[data-open="false"] { transform: rotate(-90deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-nav-chevron { transition: none; }
+}
 .adm-nav-item {
   display: flex;
   align-items: center;
@@ -284,10 +320,14 @@
 }
 .adm-row[data-split="1"] { grid-template-columns: minmax(0, 1fr); }
 .adm-row[data-split="30-70"] { grid-template-columns: minmax(0, 3fr) minmax(0, 7fr); }
+/* Kebalikannya, dipakai dashboard: grafik kunjungan 70 persen di kiri,
+   peta negara 30 persen di kanan. */
+.adm-row[data-split="70-30"] { grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); }
 .adm-row[data-split="50-50"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .adm-row[data-split="stat"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 1100px) {
   .adm-row[data-split="30-70"],
+  .adm-row[data-split="70-30"],
   .adm-row[data-split="50-50"] { grid-template-columns: minmax(0, 1fr); }
   .adm-row[data-split="stat"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -724,6 +764,21 @@
   box-shadow: 0 30px 80px -30px rgba(16, 18, 22, 0.5);
   animation: adm-pop 220ms var(--a-e);
 }
+/* Varian lebar untuk FormDialog. Badannya digulir sendiri dan tingginya
+   dibatasi, jadi form lima medan tetap punya kepala dan kaki yang terlihat di
+   layar laptop pendek maupun di ponsel. */
+.adm-dialog[data-wide="true"] {
+  width: min(620px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  max-height: min(86dvh, 760px);
+}
+.adm-dialog-body {
+  padding: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 @keyframes adm-pop {
   from { opacity: 0; transform: translate(-50%, -46%) scale(0.97); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -787,3 +842,157 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ------------------------------------------------------------------ *
+ * Tambahan 2026-09-04: peta pengunjung, timeline, dan daftar pilih.
+ * ------------------------------------------------------------------ */
+
+/* Peta pengunjung di dashboard. Tinggi tetap supaya kartunya tidak melompat
+   saat Leaflet selesai memuat tile. Sisanya diisi daftar peringkat. */
+.adm-geo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+.adm-map {
+  flex: 1 1 auto;
+  min-height: 150px;
+  border-radius: var(--a-radius-sm);
+  overflow: hidden;
+  background: var(--a-bg);
+}
+/* Tile diredupkan sedikit supaya penanda emas tetap yang paling menonjol. */
+.adm-map .leaflet-tile-pane { filter: grayscale(0.5) contrast(0.92) brightness(1.04); }
+.adm-map .leaflet-container { background: var(--a-bg); font: inherit; }
+
+.adm-geo-list {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 2px;
+  max-height: 132px;
+  overflow-y: auto;
+}
+.adm-geo-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--a-line);
+}
+.adm-geo-list li:last-child { border-bottom: none; }
+.adm-geo-list b { font-variant-numeric: tabular-nums; }
+
+/* Daftar tonggak di halaman Timeline. Bukan tabel: isinya paragraf, dan tabel
+   memaksa kalimat panjang masuk ke sel sempit. */
+.adm-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.adm-timeline li {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: start;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--a-line);
+}
+.adm-timeline li:last-child { border-bottom: none; }
+.adm-timeline-year {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  /* SENGAJA BUKAN EMAS. Diukur: --a-accent hanya 3.23:1 dan --a-accent-hover
+     4.29:1 di atas permukaan putih, keduanya di bawah lantai 4.5:1 untuk teks
+     kecil. Tahun ini membawa informasi sungguhan, bukan hiasan, jadi ia memakai
+     warna teks penuh (16.88:1). Yang membedakannya dari kalimat di sebelahnya
+     adalah huruf mono dan ketebalan 600, bukan warna. */
+  color: var(--a-text);
+  padding-top: 2px;
+}
+.adm-timeline-body { display: grid; gap: 4px; min-width: 0; }
+.adm-timeline-body strong { font-size: 0.92rem; }
+.adm-timeline-body span { font-size: 0.78rem; color: var(--a-text-2); }
+.adm-timeline-body p { margin: 0; font-size: 0.82rem; line-height: 1.6; color: var(--a-text-2); }
+.adm-timeline-body .adm-badge { justify-self: start; margin-top: 2px; }
+
+@media (max-width: 720px) {
+  .adm-timeline li { grid-template-columns: minmax(0, 1fr) auto; }
+  .adm-timeline-year { grid-column: 1 / -1; }
+}
+
+/* Daftar hasil pencarian di dialog impor menu keliling. */
+.adm-pick-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.adm-pick-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 2px;
+  border-bottom: 1px solid var(--a-line);
+  font-size: 0.86rem;
+}
+.adm-pick-list li:last-child { border-bottom: none; }
+.adm-pick-list .adm-badge { display: inline-flex; align-items: center; gap: 5px; }
+.adm-pick-sku {
+  display: block;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--a-text-2);
+}
+.adm-pick-note {
+  padding: 10px 2px 2px;
+  font-size: 0.76rem;
+  color: var(--a-text-2);
+  border-bottom: none;
+}
+
+/* Label medan yang BUKAN <label>, dipakai MediaUploadField karena kontrolnya
+   berupa gugus tombol dan dropzone, bukan satu input yang bisa ditunjuk `for`. */
+.adm-field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--a-text);
+}
+
+/* Pratinjau gambar yang sudah terpasang di form. */
+.adm-media-preview {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--a-line);
+  border-radius: var(--a-radius-sm);
+  background: var(--a-bg);
+}
+.adm-media-preview img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--a-radius-sm);
+  background: var(--a-surface);
+}
+.adm-media-path {
+  margin: 0 0 6px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: var(--a-text-2);
+  word-break: break-all;
+}
+.adm-media-upload { display: grid; gap: 10px; }
