@@ -51,7 +51,8 @@ export async function KelilingSection({ dict, locale }: { dict: Dictionary; loca
 
           <div className="keliling-logo" data-reveal>
             <Image
-              src="/brand/keliling-logo.webp"
+              /* Dari medan gambar di /content, cadangan di kamus. */
+              src={dict.keliling.logo}
               alt={dict.keliling.logoAlt}
               width={280}
               height={280}

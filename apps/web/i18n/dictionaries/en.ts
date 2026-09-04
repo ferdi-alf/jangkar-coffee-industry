@@ -120,12 +120,14 @@ const en: Dictionary = {
     menuHeading: "Cart menu",
     favourite: "Favourite",
     today: { label: "Where today", value: "Stop schedule coming soon" },
+    logo: "/brand/keliling-logo.webp",
     logoAlt: "Jangkar Keliling logo",
   },
   origin: {
     eyebrow: "Where the beans start",
     heading: "Semendo, South Sumatra",
     body: "Highland robusta from gardens in Muara Enim. Bought straight from the growers, roasted in Sako, Palembang.",
+    image: "/rantai/kebun-semendo.webp",
     imageAlt: "Terraced coffee gardens on a Semendo hillside, morning mist sitting in the valley, a farmer walking between the rows.",
   },
   contact: {

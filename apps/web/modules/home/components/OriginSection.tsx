@@ -30,7 +30,9 @@ export function OriginSection({ dict }: { dict: Dictionary }) {
 
         <div className="origin-media" data-reveal>
           <Image
-            src="/rantai/kebun-semendo.webp"
+            /* Dari medan gambar di /content pada panel, dengan jalur statis
+               di kamus sebagai cadangan. */
+            src={dict.origin.image}
             alt={dict.origin.imageAlt}
             fill
             sizes="(max-width: 1023px) 92vw, 48vw"

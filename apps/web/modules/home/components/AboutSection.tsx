@@ -1,5 +1,6 @@
 import type { Dictionary } from "@/i18n/dictionaries/id";
 import { AboutTimeline } from "@/modules/home/components/AboutTimeline";
+import { getTimeline } from "@/modules/home/lib/timeline";
 
 /**
  * Seksi About, teks berkartu plus garis waktu dua sisi.
@@ -26,8 +27,15 @@ import { AboutTimeline } from "@/modules/home/components/AboutTimeline";
  * Reveal teksnya tetap memakai `data-reveal` milik RevealRoot. Garis waktunya
  * TIDAK, ia mengurus revealnya sendiri lewat framer-motion, karena gerakannya
  * terikat progres guliran dan bukan sekadar masuk layar.
+ *
+ * SEKSI INI KINI ASINKRON, karena tonggak garis waktunya dibaca dari API saat
+ * build. Cadangan konstanta tetap ada di lib-nya, jadi API yang mati tidak
+ * pernah menggagalkan build. Pola yang sama dengan RoasterySection dan
+ * KelilingSection.
  */
-export function AboutSection({ dict }: { dict: Dictionary }) {
+export async function AboutSection({ dict, locale }: { dict: Dictionary; locale: string }) {
+  const timeline = await getTimeline(locale, dict);
+
   return (
     <div className="about-wrap">
       <div className="about-grid-bg" aria-hidden="true" />
@@ -56,7 +64,7 @@ export function AboutSection({ dict }: { dict: Dictionary }) {
           {dict.about.timelineHeading}
         </h3>
 
-        <AboutTimeline dict={dict} />
+        <AboutTimeline dict={dict} items={timeline} />
       </section>
     </div>
   );

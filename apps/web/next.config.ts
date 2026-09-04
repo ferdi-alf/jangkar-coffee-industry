@@ -1,36 +1,44 @@
 import type { NextConfig } from "next";
 
 /**
- * API DIPROKSIKAN LEWAT ORIGIN SITUS SENDIRI, dan ini keputusan produksi yang
- * menyelesaikan tiga masalah sekaligus. Jangan dicabut tanpa membaca alasannya.
+ * Dua hal, dan keduanya menentukan apakah produksi hidup atau mati.
  *
- * 1. COOKIE SESI. Panel admin memakai cookie httpOnly SameSite=Lax. Kalau web
- *    dan API berada di dua proyek Vercel dengan domain bawaan, keduanya jadi
- *    `a.vercel.app` dan `b.vercel.app`. Terverifikasi: `vercel.app` ADA di
- *    Public Suffix List, jadi kedua subdomain itu LINTAS SITE, bukan satu site.
- *    Peramban tidak akan pernah mengirim cookie Lax ke sana, dan panel admin
- *    mustahil dimasuki. Dengan proksi ini, peramban hanya pernah bicara ke
- *    origin situs, jadi cookienya selalu first-party. Ia bekerja di domain
- *    bawaan Vercel, di preview deployment, dan di domain sendiri, tanpa
- *    perbedaan konfigurasi.
+ * 1. REWRITE /api KE EXPRESS.
  *
- * 2. CORS. Tidak ada lagi permintaan lintas origin dari peramban, jadi tidak
- *    ada preflight dan tidak ada allowlist yang bisa salah diisi.
+ * Peramban tidak pernah memanggil apps/api langsung. Ia memanggil `/api/...`
+ * pada origin situs, dan berkas inilah yang meneruskannya. Karena itu tidak ada
+ * NEXT_PUBLIC_API_URL di kode mana pun.
  *
- * 3. RUTE EXPRESS UTUH. Alternatifnya adalah `vercel.json` di apps/api dengan
- *    rewrite `"/(.*)"` ke `"/api"`. Dokumentasi Vercel menunjukkan capture pada
- *    source diteruskan sebagai QUERY, bukan sebagai path, jadi ada risiko nyata
- *    Express melihat `/api` untuk setiap permintaan dan seluruh routingnya
- *    runtuh. Rewrite Next di sini meneruskan sisa path secara eksplisit lewat
- *    `:path*`, jadi tidak ada yang perlu ditebak.
+ * Alasannya bukan kerapian. Cookie sesi panel adalah httpOnly SameSite=Lax, dan
+ * dua proyek Vercel mendapat domain a.vercel.app dan b.vercel.app. Terverifikasi:
+ * vercel.app ada di Public Suffix List, jadi kedua subdomain itu LINTAS SITE dan
+ * peramban tidak akan pernah mengirim cookie Lax ke sana. Tanpa proksi ini panel
+ * admin mustahil dimasuki di domain bawaan Vercel maupun di preview deployment.
+ * Sebagai bonus, CORS lenyap sepenuhnya.
  *
- * `API_ORIGIN` adalah variabel SISI SERVER, tanpa prefiks NEXT_PUBLIC_, karena
- * peramban tidak perlu tahu alamat API sama sekali. Kalau ia tidak diisi, tidak
- * ada rewrite yang dipasang dan seluruh panggilan /api akan 404. Itu disengaja:
- * gagal terang-terangan lebih baik daripada diam-diam menunjuk localhost di
- * produksi.
+ * 2. REMOTE PATTERNS UNTUK SUPABASE STORAGE.
+ *
+ * Gambar produk ecommerce diunggah pemilik lewat panel dan disimpan di bucket
+ * `public-media`, jadi `product.image_path` berisi URL penuh ke host Supabase,
+ * bukan lagi jalur statis di public/. RoasterySection merender nilai itu lewat
+ * next/image, dan next/image MENOLAK host yang tidak terdaftar dengan melempar
+ * galat, bukan sekadar menampilkan gambar rusak. Tanpa blok di bawah, seksi
+ * Roastery mati total begitu satu gambar diunggah.
+ *
+ * Polanya sengaja sempit: hanya jalur objek PUBLIK. Jalur storage lain, termasuk
+ * endpoint bertanda tangan dan endpoint unggah, tetap di luar daftar.
  */
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
+
   async rewrites() {
     const origin = process.env.API_ORIGIN;
     if (!origin) {

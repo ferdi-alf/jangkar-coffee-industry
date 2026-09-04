@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 import "leaflet/dist/leaflet.css";
 
-import { HQ } from "@/modules/home/constants/menu-data";
+import type { OutletInfo } from "@/modules/home/lib/outlet";
 
 /**
  * Peta HQ Sako.
@@ -22,11 +22,12 @@ import { HQ } from "@/modules/home/constants/menu-data";
  * peta berwarna penuh akan jadi satu-satunya benda di halaman yang tidak patuh
  * palet.
  *
- * KOORDINATNYA MASIH PERKIRAAN sampai pemilik proyek memberikan yang tepat.
+ * KOORDINATNYA DATANG DARI TABEL `outlet`, disunting di /outlet pada panel.
+ * Selama `coordsApproximate` masih menyala, koordinatnya perkiraan.
  * Karena itu tombol arah memakai ALAMAT TEKS yang terverifikasi, bukan
  * koordinat ini, supaya pengunjung tetap sampai ke tempat yang benar.
  */
-export function OutletMap({ label }: { label: string }) {
+export function OutletMap({ label, outlet }: { label: string; outlet: OutletInfo }) {
   const holder = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export function OutletMap({ label }: { label: string }) {
       if (cancelled || !holder.current) return;
 
       const instance = L.map(el, {
-        center: [HQ.coords.lat, HQ.coords.lng],
+        center: [outlet.lat, outlet.lng],
         zoom: 15,
         scrollWheelZoom: false,
         attributionControl: true,
@@ -54,7 +55,7 @@ export function OutletMap({ label }: { label: string }) {
 
       // Penanda digambar sendiri, bukan ikon PNG bawaan Leaflet, supaya tidak
       // ada permintaan gambar tambahan dan warnanya patuh palet.
-      L.marker([HQ.coords.lat, HQ.coords.lng], {
+      L.marker([outlet.lat, outlet.lng], {
         icon: L.divIcon({
           className: "outlet-pin",
           html: '<span class="outlet-pin-dot"></span>',
@@ -68,7 +69,7 @@ export function OutletMap({ label }: { label: string }) {
       cancelled = true;
       map?.remove();
     };
-  }, []);
+  }, [label, outlet.lat, outlet.lng]);
 
   return <div className="outlet-map" ref={holder} role="img" aria-label={label} />;
 }

@@ -4,13 +4,18 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
 import type { Dictionary } from "@/i18n/dictionaries/id";
-import { HQ } from "@/modules/home/constants/menu-data";
+import type { OutletInfo } from "@/modules/home/lib/outlet";
 
 /**
  * Seksi 5, Outlet. Satu titik tetap, HQ Sako.
  *
  * Kartu "Segera" dihapus atas permintaan pemilik proyek: hanya data yang
  * benar-benar ada yang ditampilkan.
+ *
+ * DATANYA KINI DARI TABEL `outlet`, bukan konstanta. Induknya yang
+ * mengambilnya dan mengopernya sebagai prop, jadi halaman /outlet di panel
+ * benar-benar mengubah apa yang dilihat pengunjung. Sebelumnya halaman itu
+ * menyunting tabel yang tidak dibaca situs sama sekali.
  *
  * Petanya dimuat MALAS DUA LAPIS. Pertama `next/dynamic` dengan `ssr: false`,
  * karena Leaflet menyentuh `window` dan akan meledak saat prerender. Kedua
@@ -23,7 +28,7 @@ const OutletMap = dynamic(
   { ssr: false },
 );
 
-export function OutletSection({ dict }: { dict: Dictionary }) {
+export function OutletSection({ dict, outlet }: { dict: Dictionary; outlet: OutletInfo }) {
   const section = useRef<HTMLElement>(null);
   const [near, setNear] = useState(false);
 
@@ -55,25 +60,25 @@ export function OutletSection({ dict }: { dict: Dictionary }) {
       <div className="outlet-single" data-reveal data-spot>
         <div className="outlet-body">
           <span className="outlet-chip">{dict.outlet.chip}</span>
-          <h3 className="outlet-name">{HQ.name}</h3>
-          <address className="outlet-address">{HQ.address}</address>
-          <span className="outlet-hours">{HQ.hours}</span>
+          <h3 className="outlet-name">{outlet.name}</h3>
+          <address className="outlet-address">{outlet.address}</address>
+          {outlet.hours ? <span className="outlet-hours">{outlet.hours}</span> : null}
           <a
             className="outlet-directions"
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(HQ.mapsQuery)}`}
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(outlet.mapsQuery)}`}
             target="_blank"
             rel="noopener noreferrer"
           >
             {dict.outlet.directions}
             <span aria-hidden="true">&#8594;</span>
           </a>
-          {HQ.coords.approximate ? (
+          {outlet.coordsApproximate ? (
             <p className="outlet-note">{dict.outlet.mapPending}</p>
           ) : null}
         </div>
 
         <div className="outlet-map-holder">
-          {near ? <OutletMap label={dict.outlet.mapLabel} /> : null}
+          {near ? <OutletMap label={dict.outlet.mapLabel} outlet={outlet} /> : null}
         </div>
       </div>
     </section>

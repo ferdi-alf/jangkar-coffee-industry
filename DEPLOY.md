@@ -95,6 +95,7 @@ Isi untuk **Production** dan **Preview**.
 | `SUPABASE_MEDIA_BUCKET` | `public-media`                             |                                                                |
 | `NODE_ENV`              | `production`                               | menyalakan cookie `Secure` dan menyembunyikan pesan galat asli |
 | `CONTACT_IP_SALT`       | string acak panjang, baru                  | jangan pakai yang di `.env` lokal                              |
+| `TRACK_SECRET`          | string acak panjang, baru                  | **HARUS SAMA PERSIS** dengan yang di proyek web                |
 | `CORS_ORIGINS`          | URL proyek web                             | pagar cadangan, peramban tidak memakainya                      |
 | `COOKIE_DOMAIN`         | **kosongkan**                              | lihat peringatan di bawah                                      |
 
@@ -160,10 +161,17 @@ Buat proyek Vercel kedua dari repositori yang sama.
 | Nama                   | Nilai                                                     | Catatan                                                           |
 | ---------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | `API_ORIGIN`           | URL proyek API, misalnya `https://jangkar-api.vercel.app` | **tanpa** garis miring di akhir, **tanpa** prefiks `NEXT_PUBLIC_` |
-| `NEXT_PUBLIC_SITE_URL` | URL publik situs                                          | dipakai `metadataBase` untuk Open Graph                           |
+| `NEXT_PUBLIC_SITE_URL` | URL publik situs                                          | cadangan `metadataBase` bila SEO belum diisi di panel              |
+| `TRACK_SECRET`         | string acak panjang, baru                                 | **HARUS SAMA PERSIS** dengan yang di proyek API                    |
 
-Hanya dua. Proyek web **tidak boleh** punya satu pun kredensial Supabase: ia tidak pernah menyentuh
-basis data secara langsung.
+Hanya tiga. Proyek web **tidak boleh** punya satu pun kredensial Supabase: ia tidak pernah
+menyentuh basis data secara langsung.
+
+> **`TRACK_SECRET` yang berbeda antara kedua proyek berarti NOL kunjungan tercatat, diam-diam.**
+> Middleware situs mengirimkannya sebagai header ke `POST /track/visit`, dan API menolak dengan
+> 403 kalau tidak cocok. Penolakan itu ditelan supaya tidak pernah menghalangi halaman, jadi
+> satu-satunya gejalanya adalah grafik kunjungan yang rata nol. Kalau salah satunya kosong,
+> endpointnya mati sama sekali, dan itu memang disengaja: gagal tertutup, bukan gagal terbuka.
 
 > **`API_ORIGIN` dibaca saat BUILD, bukan hanya saat runtime.** Seksi Roastery dan Keliling
 > mengambil datanya saat build. Karena itu **proyek API harus sudah hidup sebelum proyek web
@@ -228,6 +236,16 @@ Setelah domain aktif, perbarui:
 
 ## Pengaturan Supabase yang masih perlu dinyalakan
 
+**Bucket storage `public-media` sudah dibuat lewat migrasi** `20260903_0200_storage_bucket.sql`,
+jadi tidak perlu dibuat tangan. Sebelum migrasi itu ada, `storage.buckets` benar-benar KOSONG, dan
+itulah sebab tunggal kenapa unggah media selalu gagal: kodenya benar sejak awal, buketnya yang
+belum pernah ada. Kalau suatu saat unggah gagal lagi, periksa dulu bucketnya ada:
+
+```sql
+select id, public, file_size_limit from storage.buckets;
+-- harus memulangkan public-media, public = true, 4194304
+```
+
 Satu temuan advisor yang masih terbuka, dan ia setelan dashboard bukan kode:
 
 **Authentication, Policies, Leaked password protection.** Nyalakan. Supabase akan memeriksa kata
@@ -277,11 +295,20 @@ npx turbo run build --force               # cache Turborepo tidak tahu data beru
 Di produksi keduanya tidak berbahaya: halaman memakai ISR `revalidate: 300`, jadi ia menyegarkan
 dirinya sendiri dalam lima menit tanpa perlu deploy ulang. Yang tersesat hanya pemeriksaan lokal.
 
-### 4. Menu outlet masih dari kode
+### 4. Nav, footer, dan marquee masih dari kode
 
-Menu Keliling sudah dibaca dari basis data dan bisa diubah dari panel. **Menu outlet di seksi Menu
-masih membaca konstanta** di `modules/home/constants/menu-data.ts`, jadi mengubahnya menuntut
-perubahan kode dan deploy ulang. Ini pekerjaan yang belum diminta, bukan kerusakan.
+Sejak 2026-09-04 hampir seluruh isi situs dibaca dari basis data: menu outlet, menu keliling,
+produk ecommerce, teks sembilan seksi, timeline, outlet, kontak, sosial media, dan SEO. Konstanta
+di `modules/home/constants/menu-data.ts` dan kamus `i18n/dictionaries/` **tetap ada sebagai
+cadangan** kalau API tidak bisa dihubungi saat build, dan tidak boleh dihapus.
+
+Yang MASIH hanya bisa diubah lewat deploy, atas keputusan pemilik proyek:
+
+- **Label navigasi, teks footer, dan kata marquee.** Ketiganya belum punya baris di `page_content`.
+  Menambahkannya berarti tiga seksi baru di basis data dan nol perubahan kode komponen.
+- **Foto hero dan brand mark.** Sengaja: foto hero adalah elemen LCP, dan impor statis Next yang
+  memberi ukuran serta blur placeholder saat build. Foto kebun Semendo dan logo keliling sudah
+  bisa diganti dari `/content`.
 
 ---
 

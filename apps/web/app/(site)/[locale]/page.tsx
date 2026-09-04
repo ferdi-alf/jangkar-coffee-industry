@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 
 import { isLocale } from "@/i18n/config";
-import { getDictionary } from "@/i18n/get-dictionary";
+import { getSiteDictionary } from "@/i18n/site-dictionary";
 import { ChainCards } from "@/modules/hero/components/ChainCards";
 import { HeroBranchPhoto } from "@/modules/hero/components/HeroBranchPhoto";
 import { HeroCopy } from "@/modules/hero/components/HeroCopy";
 import { HeroFilm } from "@/modules/hero/components/HeroFilm";
 import { AboutSection } from "@/modules/home/components/AboutSection";
+import { getHeadquarters } from "@/modules/home/lib/outlet";
+import { getOutletMenu } from "@/modules/home/lib/outlet-menu";
 import { ContactSection } from "@/modules/home/components/ContactSection";
 import { KelilingSection } from "@/modules/home/components/KelilingSection";
 import { MenuSection } from "@/modules/home/components/MenuSection";
@@ -33,7 +35,15 @@ import { RoasterySection } from "@/modules/home/components/RoasterySection";
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const dict = await getDictionary(locale);
+
+  /* Kamus dan data outlet diambil BERSAMAAN. Keduanya tidak saling bergantung,
+     jadi menjalankannya berurutan hanya menambah satu perjalanan bolak-balik ke
+     API pada setiap build halaman. */
+  const [dict, outlet, outletMenu] = await Promise.all([
+    getSiteDictionary(locale),
+    getHeadquarters(locale),
+    getOutletMenu(locale),
+  ]);
 
   return (
     <main>
@@ -83,13 +93,13 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         {/* About duduk di sini atas pilihan pemilik proyek: setelah Rantai,
             sebelum Menu. Rantainya diperlihatkan, ceritanya diperdalam selagi
             masih dipikirkan, baru produknya datang sebagai bukti. */}
-        <AboutSection dict={dict} />
-        <MenuSection dict={dict} />
+        <AboutSection dict={dict} locale={locale} />
+        <MenuSection dict={dict} categories={outletMenu} />
         <RoasterySection dict={dict} locale={locale} />
-        <OutletSection dict={dict} />
+        <OutletSection dict={dict} outlet={outlet} />
         <KelilingSection dict={dict} locale={locale} />
         <OriginSection dict={dict} />
-        <ContactSection dict={dict} />
+        <ContactSection dict={dict} locale={locale} />
       </RevealRoot>
     </main>
   );

@@ -4,7 +4,7 @@ import { motion, useScroll, useSpring, useTransform } from "framer-motion";
 import { useRef } from "react";
 
 import type { Dictionary } from "@/i18n/dictionaries/id";
-import { ABOUT_MILESTONES } from "@/modules/home/constants/about-timeline";
+import type { TimelineItem } from "@/modules/home/lib/timeline";
 
 /**
  * Garis waktu About: garis di tengah, kartu berselang kiri dan kanan.
@@ -39,6 +39,12 @@ import { ABOUT_MILESTONES } from "@/modules/home/constants/about-timeline";
  *      berulang tiap dilewati. Di sini `once: true`, sama seperti seluruh seksi
  *      lain yang memakai RevealRoot.
  *
+ * DATANYA KINI DARI BASIS DATA, bukan dari konstanta. Induknya yang
+ * mengambilnya lewat modules/home/lib/timeline.ts lalu mengoper hasilnya ke
+ * sini sebagai prop, jadi komponen ini tetap bisa dirender tanpa tahu dari mana
+ * datangnya. Kamus masih dipakai untuk dua hal yang memang teks terjemahan:
+ * label pembaca layar dan kata penutup rentang ("kini" atau "now").
+ *
  * GERAK DIKURANGI dan TANPA JAVASCRIPT diurus CSS, bukan cabang di JSX.
  * Merender pohon yang berbeda akan memicu ketidakcocokan hidrasi, dan pelajaran
  * mahal di hero sesi ini adalah mengganti pohon saat kemampuan media berubah
@@ -46,7 +52,7 @@ import { ABOUT_MILESTONES } from "@/modules/home/constants/about-timeline";
  * yang memaku semuanya ke keadaan akhir. Itu satu-satunya kasus di mana CSS
  * mengalahkan gaya sebaris, dan di sinilah gunanya.
  */
-export function AboutTimeline({ dict }: { dict: Dictionary }) {
+export function AboutTimeline({ dict, items }: { dict: Dictionary; items: TimelineItem[] }) {
   const track = useRef<HTMLDivElement>(null);
 
   /* Mulai terisi saat puncak daftar sudah masuk layar, dan selesai sebelum
@@ -59,12 +65,18 @@ export function AboutTimeline({ dict }: { dict: Dictionary }) {
   const smooth = useSpring(scrollYProgress, { stiffness: 90, damping: 28, restDelta: 0.001 });
   const fill = useTransform(smooth, [0, 1], ["0%", "100%"]);
 
-  const events = ABOUT_MILESTONES.map((milestone) => ({
-    ...milestone,
-    ...dict.about.timeline[milestone.key],
-    /* Rentang dirakit di sini: angkanya dari konstanta, kata penutupnya dari
-       kamus, karena "kini" dan "now" adalah teks yang diterjemahkan. */
-    range: `${milestone.from} - ${milestone.to ?? dict.about.present}`,
+  const events = items.map((item) => ({
+    ...item,
+    /* Rentang dirakit di sini: angkanya dari basis data, kata penutupnya dari
+       kamus, karena "kini" dan "now" adalah teks yang diterjemahkan sedangkan
+       angka tahun tidak. Tahun akhir yang sama dengan tahun mulai ditulis
+       sekali saja, kalau tidak akan terbaca "2016 - 2016". */
+    range:
+      item.yearEnd === null
+        ? `${item.year} - ${dict.about.present}`
+        : item.yearEnd === item.year
+          ? `${item.year}`
+          : `${item.year} - ${item.yearEnd}`,
   }));
 
   return (
@@ -93,8 +105,8 @@ export function AboutTimeline({ dict }: { dict: Dictionary }) {
             >
               <p className="tl-year">{event.range}</p>
               <h4 className="tl-title">{event.title}</h4>
-              <p className="tl-subtitle">{event.subtitle}</p>
-              <p className="tl-body">{event.body}</p>
+              {event.subtitle ? <p className="tl-subtitle">{event.subtitle}</p> : null}
+              {event.description ? <p className="tl-body">{event.description}</p> : null}
             </motion.div>
           </li>
         ))}

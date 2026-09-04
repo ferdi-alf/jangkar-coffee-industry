@@ -9,21 +9,36 @@ konteks, baca ini sebelum menulis kode.
 > Supabase `fylxkwqwuaidbfpmdwhu` sudah bermigrasi dan terisi. Semuanya sudah diuji ujung ke ujung
 > dengan login sungguhan pada 2026-09-03.
 >
-> **Isi basis data:** 34 produk (68 terjemahan, 68 penanda kanal, 10 di antaranya aktif di kanal
-> keliling), 6 kategori, 1 outlet, 9 seksi konten dengan 101 medan dan 202 terjemahan, 1 akun
-> owner. Nol tautan marketplace dan nol media, keduanya sengaja kosong karena datanya belum ada.
+> **Isi basis data:** 34 produk (68 terjemahan, 68 penanda kanal, 33 aktif di kanal outlet dan 10
+> di kanal keliling), 6 kategori, 1 outlet, 9 seksi konten dengan 88 medan (86 teks + 2 gambar),
+> 5 tonggak timeline, 1 baris setelan SEO, 1 baris kontak, 1 tautan sosial, 1 akun owner.
+>
+> **Situs membaca hampir seluruh isinya dari basis data sejak 2026-09-04.** Yang tersisa di kode
+> hanyalah label navigasi, teks footer, kata marquee, foto hero, dan brand mark. Konstanta dan
+> kamus TETAP ADA sebagai cadangan saat API mati ketika build, dan tidak boleh dihapus.
+>
+> **Bucket storage `public-media` SUDAH DIBUAT** (migrasi `20260903_0200`). Sebelum itu ia tidak
+> pernah ada, dan itulah sebab tunggal kenapa unggah media selalu gagal: kodenya benar, buketnya
+> yang belum ada.
 >
 > **`apps/api/.env` sudah terisi** dari `secrets/ACCESS.md` dan diblokir git. Jalankan
 > `npm run dev` dari akar untuk web dan api sekaligus.
 >
-> **Tiga hal yang tersisa untuk pemilik proyek, semuanya data bisnis bukan kode:**
+> **Yang tersisa untuk pemilik proyek, semuanya data bisnis bukan kode:**
 >
-> 1. **Ganti kata sandi owner**, lalu hapus `ADMIN_BOOTSTRAP_PASSWORD` dari `apps/api/.env`.
->    Kata sandi yang ada sekarang dibangkitkan acak oleh skrip bootstrap.
-> 2. **Isi tautan Shopee dan Tokopedia** di `/management-product`. Sudah terbukti: begitu terisi,
->    tombol di situs berubah dari `<span>` mati jadi `<a href>` sungguhan tanpa menyentuh kode.
+> 1. **Ganti kata sandi owner**, sekarang bisa lewat `/profil` di panel. Setelah itu hapus
+>    `ADMIN_BOOTSTRAP_PASSWORD` dari `apps/api/.env`.
+> 2. **Isi tautan Shopee dan Tokopedia** di `/ecommerce`. Sudah terbukti: begitu terisi, tombol di
+>    situs berubah dari `<span>` mati jadi `<a href>` sungguhan tanpa menyentuh kode.
 > 3. **Koordinat HQ yang tepat** di `/outlet`. Selama `coords_approximate` masih menyala, tombol
->    navigasi memakai alamat teks, bukan koordinatnya.
+>    navigasi memakai alamat teks, bukan koordinatnya. Situs sekarang BENAR-BENAR membaca tabel
+>    outlet, jadi perubahan di halaman itu akhirnya terlihat.
+> 4. **Tahun timeline di `/timeline` masih karangan.** Kelimanya ditandai placeholder oleh sesi
+>    sebelumnya karena tanggal berdirinya Jangkar tidak tercatat di dokumen mana pun yang dimiliki
+>    proyek ini. Sekarang ada halamannya, jadi tinggal dikoreksi.
+> 5. **Tautan sosial media selain Instagram** di `/kontak`. Delapan platform didukung; hanya
+>    Instagram yang punya data nyata, sisanya sengaja dibiarkan kosong daripada dikarang.
+> 6. **Alamat surel resmi** di `/kontak`, dibiarkan kosong karena memang belum pernah diberikan.
 >
 > Satu ambiguitas data menunggu keputusan Anda: "Americano" dan "Americano / Long Black" masuk
 > sebagai DUA produk karena menu outlet dan poster keliling menuliskannya berbeda. Kalau memang
@@ -87,10 +102,22 @@ locale, dan satu layout akar tidak bisa melayani keduanya. Karena itu `[locale]`
 
 **`admin.css` terpisah karena alasan performa, jangan digabung ke `globals.css`.** Terukur: gaya
 panel 4.031 byte setelah gzip, dan pemisahan ini membuat nol byte di antaranya diunduh pengunjung
-halaman publik. Rute admin: `/login`, `/dashboard`, `/product`, `/management-product`, `/category`,
-`/outlet`, `/keliling`, `/content`, `/media`, `/pesan`. Menambah satu berarti menambah satu entri
-di `shared/constants/routes.ts`, karena daftar itulah yang dipakai middleware untuk tahu bahwa
-segmen tersebut bukan kode bahasa.
+halaman publik. Rute admin: `/login`, `/dashboard`, `/category`, `/menu`, `/keliling`,
+`/ecommerce`, `/outlet`, `/content`, `/timeline`, `/seo`, `/kontak`, `/profil`, `/pengguna`,
+`/pesan`. Menambah satu berarti menambah satu entri di `shared/constants/routes.ts`, karena daftar
+itulah yang dipakai middleware untuk tahu bahwa segmen tersebut bukan kode bahasa.
+
+**Dua rute DIHAPUS pada 2026-09-04, jangan dihidupkan lagi tanpa alasan baru.** `/product`, kartu
+katalog baca-saja, hilang karena tiap tabel kini punya halamannya sendiri. `/media`, pustaka
+gambar, hilang karena ia berdiri sendiri tanpa pernah dipakai satu form pun: nol baris di tabelnya
+dan nol foreign key yang menunjuk kepadanya. Gambar sekarang diunggah langsung di form yang
+membutuhkannya lewat `shared/components/MediaUploadField.tsx`. Modul API `media` TETAP ADA dan
+justru dipakai komponen itu.
+
+**Sidebar punya satu grup dropdown, dan hanya satu.** `Navigasi menu` (kategori, menu utama, menu
+keliling) bisa dibuka-tutup dan keadaannya disimpan di localStorage lewat `useSyncExternalStore`,
+bukan useState di dalam effect. Grup yang memuat halaman aktif selalu dipaksa terbuka. Grup lain
+tetap judul biasa.
 
 `apps/web` memakai **struktur default Next.js: App Router, tanpa folder `src/`.** Route ada di
 `apps/web/app/`, dan alias `@/*` menunjuk ke akar app (`./*`), bukan `./src/*`. Jangan
@@ -233,8 +260,9 @@ dari komponen-komponen itu.
 ## Backend dan panel admin
 
 Express sudah ditata per modul sesuai spec: `src/modules/<nama>/{routes,controller,service,repository,schema,contract}.ts`
-plus `src/shared/{contracts,middleware,db,utils,constants}`. Modul yang ada: `auth`, `product`,
-`category`, `outlet`, `keliling`, `content`, `media`, `stats`, `contact`, `health`.
+plus `src/shared/{contracts,middleware,db,utils,constants}`. Modul yang ada: `auth`, `user`,
+`product`, `category`, `outlet`, `content`, `media`, `settings`, `timeline`, `track`, `stats`,
+`contact`, `health`.
 
 **Aturan lapisan ditegakkan, jangan dilanggar diam-diam:** hanya repository yang mengimpor klien
 Supabase, dan service tidak pernah melihat objek `Request` Express. Itulah yang membuat aturan
@@ -252,16 +280,21 @@ Tiga hal yang mudah dirusak tanpa sadar:
   diperiksa tanpa menyentuh badan permintaan. Kalau dibalik, permintaan tanpa token tetap membuat
   5 MB berkas dibaca ke memori lebih dulu baru ditolak.
 
-Panelnya memakai TanStack Query terhadap Express, sonner untuk toast (posisi kiri atas), dan
+Panelnya memakai TanStack Query terhadap Express, sonner untuk toast (posisi **kanan atas**, diubah dari kiri atas atas permintaan pemilik pada 2026-09-04), dan
 recharts untuk grafik. Komponen bersama ada di `shared/components/`: `DataTable`, `FormDrawer`
 (kanan, panah kiri di kiri atas, berhenti di batas sidebar), `DetailDrawer` (bawah, 85 persen),
-`ConfirmDialog` (form sampai 3 medan), `DropzoneField`, `PasswordField`, `LocaleTabs`, `StatCard`,
-`ChartCard`. Aturan bentuk input dari pemilik proyek ditegakkan komponen-komponen itu, bukan
+`ConfirmDialog` (form sampai 3 medan), `FormDialog` (modal lebih dari 3 medan), `DropzoneField`,
+`MediaUploadField`, `PasswordField`, `LocaleTabs`, `StatCard`, `ChartCard`. Aturan bentuk input dari pemilik proyek ditegakkan komponen-komponen itu, bukan
 diingat manusia tiap halaman.
 
-**Grafik dashboard hanya memakai data yang benar-benar ada.** Tidak ada pendapatan, trafik, atau
+**Grafik dashboard hanya memakai data yang benar-benar ada.** Tidak ada pendapatan dan tidak ada
 konversi: sistem ini tidak mencatat satu pun transaksi, jadi grafik penjualan hanya akan jadi angka
 karangan. Jangan menambahkannya.
+
+**Kunjungan situs SEKARANG ADA**, menggantikan grafik pesan kontak masuk. Angkanya nyata dan
+dicatat `apps/web/middleware.ts`, bukan diperkirakan. Dua batasnya harus tetap tertulis di
+keterangan kartunya: ia menghitung MUAT HALAMAN bukan manusia, dan kunjungan tanpa negara adalah
+keadaan normal, bukan galat. Lihat bagian Pencatat kunjungan di bawah.
 
 ### Keliling: menu saja, tidak ada armada dan tidak ada lokasi
 
@@ -282,6 +315,126 @@ outlet: "Kopi Susu Jangkar" ada di Signature Series di sana. Satu kolom tidak bi
 menu yang mengelompokkan berbeda, jadi aturannya sederhana: berkategori `non-coffee` masuk
 Non-Coffee, sisanya Coffee. Terukur, hasilnya sama persis dengan poster aslinya, enam kopi dan
 empat non-kopi.
+
+### Slug dibuat otomatis, lalu DIKUNCI
+
+Form panel tidak punya medan slug lagi. Server membuatnya dari judul Indonesia saat item dibuat
+(`apps/api/src/shared/utils/slug.ts`), dan pada UPDATE slug yang dikirim justru DIBUANG.
+
+Alasannya bukan kerapian. `category.slug === "non-coffee"` adalah aturan yang memisahkan kelompok
+Coffee dan Non-Coffee di menu keliling, lihat `modules/home/lib/keliling-menu.ts`. Kalau slug ikut
+berubah saat nama kategori disunting, mengganti "Non-Coffee" jadi "Tanpa Kopi" akan memindahkan
+empat item ke kelompok yang salah TANPA satu pun pesan galat. Kegagalan diam adalah kegagalan
+terburuk.
+
+Berlaku untuk produk dan kategori. **Slug outlet tetap manual**, tidak diminta dan isinya satu
+baris HQ.
+
+### Pencatat kunjungan ada di middleware situs, bukan di API
+
+`x-vercel-ip-country` hanya BENAR pada permintaan yang langsung dari peramban ke proyek web. API
+dipanggil lewat proksi rewrite, jadi kalau API yang membacanya, yang terbaca adalah negara
+datacenter Vercel. Karena itu `apps/web/middleware.ts` yang membacanya lalu meneruskannya ke
+`POST /track/visit` dengan header rahasia `TRACK_SECRET`, yang harus diisi SAMA PERSIS di kedua
+proyek.
+
+Tiga hal yang mudah dirusak:
+
+- **Dicatat hanya pada segmen yang sudah berprefiks locale.** Pengunjung yang membuka `/` melewati
+  middleware DUA KALI, sekali untuk dialihkan dan sekali untuk halamannya. Mencatat di kedua
+  tempat melipatgandakan angkanya.
+- **Tanpa `TRACK_SECRET`, endpointnya MATI, bukan terbuka.** Gagal tertutup, bukan gagal terbuka.
+- **IP mentah tidak pernah disimpan.** Ia bahan `visitor_hash` bersama user agent, garam, dan
+  TANGGAL, lalu dibuang. Tanggal ikut masuk hash supaya jejak seseorang tidak bisa dirangkai antar
+  hari. Pola yang sama dengan `contact_message.ip_hash`.
+
+Agregasinya di Postgres (`visits_by_day`, `visits_by_country`), BUKAN di Node, karena satu baris
+per muat halaman akan berubah dari lambat menjadi kehabisan memori kalau ditarik semua ke memori.
+
+### Ikon merek TIDAK ADA di lucide v1
+
+Diperiksa langsung terhadap 4.096 berkas ikon yang terpasang: lucide versi 1 sudah mencabut seluruh
+ikon merek. Tidak ada Instagram, Facebook, YouTube, maupun LinkedIn. Jadi ikon sosial media memakai
+path simple-icons berlisensi CC0 di `components/ui/social-icons.tsx`, pola yang sudah dipakai glif
+Shopee. Jangan menghabiskan waktu mencarinya di lucide.
+
+Setiap ikon WAJIB berpasangan dengan nama platform yang terbaca pembaca layar. Glifnya sendiri
+`aria-hidden`, jadi namanya dibawa `aria-label` pada tautannya.
+
+### Situs membaca outlet dari basis data, bukan konstanta lagi
+
+Halaman `/outlet` di panel dulu menyunting tabel yang TIDAK PERNAH dibaca situs: `OutletSection`
+membaca konstanta `HQ`. Itu persis kegagalan yang sudah diperbaiki untuk Keliling, panel yang
+mengelola data tak terlihat. Sejak 2026-09-04 situs membacanya lewat `modules/home/lib/outlet.ts`.
+
+Konstanta `HQ` di `menu-data.ts` MASIH ADA dan masih dipakai, tapi hanya sebagai CADANGAN di dalam
+`lib/outlet.ts` dan `lib/site-settings.ts` bila API mati saat build. Jangan menghapusnya.
+
+### Situs membaca isinya dari basis data, bukan dari kode
+
+Sejak 2026-09-04 hampir seluruh isi situs datang dari basis data. Sebelum itu ada tiga lubang yang
+bentuknya sama: panel menyunting sesuatu yang tidak pernah dilihat pengunjung.
+
+**Yang terbesar: editor `/content` sama sekali tidak tersambung.** Endpoint `GET /content/public`
+sudah ada dan berfungsi sejak awal, tapi NOL pemanggil di `apps/web`. Seluruh teks situs datang
+dari `i18n/dictionaries/`, jadi menyunting 86 medan di panel tidak berpengaruh apa pun dan tidak
+ada satu pesan galat pun yang memberi tahu. Yang menyambungkannya adalah
+`apps/web/i18n/site-dictionary.ts`.
+
+**Cara kerjanya: MENIMPA, bukan mengganti.** Kamus statis dimuat lebih dulu, lalu nilai dari basis
+data ditimpakan di atasnya menurut jalur bertitik. Tiga akibat yang membuat pendekatan ini aman:
+
+- Tipe `Dictionary` tidak berubah, jadi **nol komponen situs perlu disentuh**.
+- Medan kosong di basis data jatuh ke kamus. Halaman tanpa judul jauh lebih merusak daripada
+  halaman berjudul lama.
+- API mati saat build berarti situs memakai kamus, persis seperti sebelumnya. Build tidak pernah
+  gagal karenanya.
+
+Dua hal yang mudah dirusak di berkas itu:
+
+- **Kamus disalin dalam (`structuredClone`) sebelum ditimpa.** `getDictionary` memakai `import()`
+  statis, dan modul Node hanya dievaluasi sekali per proses. Menimpa objeknya langsung membuat
+  nilai satu permintaan bocor ke permintaan berikutnya, termasuk ke locale yang lain.
+- **Jalur yang tidak ada di kamus DIABAIKAN, tidak dibuat.** Baris basis data yang tidak dikenali
+  komponen mana pun memang tidak punya tempat untuk ditampilkan, dan menyuntikkannya hanya membuat
+  objeknya berbeda dari tipenya sendiri.
+
+`about.body` dan `menu.notes` adalah ARRAY di kamus tapi satu string dipisah baris baru di basis
+data, karena begitulah skrip seed menyimpannya dan begitu pula editor menampilkannya. Penimpaannya
+memecah dengan `split("\n")` saat targetnya array.
+
+**Menu outlet juga sudah dari basis data**, lewat `modules/home/lib/outlet-menu.ts`. Berbeda dengan
+menu keliling yang mengelompokkan dengan aturan tampilan dua ember, menu outlet memakai kategori
+sungguhan beserta urutannya, jadi mengganti nama kategori di `/category` langsung mengubah judul
+kartu di situs. Ia mengambil produk DAN kategori sekaligus, karena nama kategori tidak ikut di
+respons produk yang hanya membawa `categorySlug`.
+
+**Produk tanpa kategori tidak tampil di menu situs**, karena kartunya adalah kategorinya. Itu
+disengaja dan dibuat terlihat di dua tempat: lencana "Tanpa kategori, tidak tampil" di kolom
+Kategori pada `/menu`, dan `console.warn` menyebut SKU-nya saat build.
+
+**Konstanta dan kamus TIDAK boleh dihapus.** Keduanya berhenti jadi sumber kebenaran tapi tetap
+jadi cadangan saat API tidak bisa dihubungi ketika build.
+
+### Bug fokus input: jangan taruh `onClose` di dependensi effect
+
+Keempat komponen overlay (`FormDrawer`, `FormDialog`, `ConfirmDialog`, `DetailDrawer`) merebut
+fokus di dalam sebuah effect. Effect itu dulu bergantung pada `onClose`, sementara SELURUH pemanggil
+mengirimnya sebagai arrow inline yang identitasnya baru pada setiap render induk. Akibatnya setiap
+kali induk render ulang, entah karena kueri TanStack selesai atau state lain berubah, effect
+berjalan lagi dan MEREBUT FOKUS ke tombol pertama di panel. Pemakai yang sedang mengetik tiba-tiba
+mendarat di tombol.
+
+Terukur di peramban sungguhan sebelum diperbaiki: mengetik di medan tahun akhir pada modal Timeline
+melompatkan fokus kembali ke medan tahun, dengan tepat satu panggilan `.focus()` dari kode.
+
+Perbaikannya: `onClose` dipegang lewat ref yang selalu mutakhir, dan effect hanya bergantung pada
+`open`. Kalau menambah komponen overlay baru, pakai pola yang sama. Jangan pernah memasukkan
+callback prop ke dependensi effect yang punya efek samping terlihat.
+
+Pola pasangannya: **`useWatch` jangan dipasang di komponen form yang besar.** Langganannya membuat
+seluruh form render ulang pada setiap ketikan. Pisahkan medannya jadi komponen kecil, seperti
+`ProductImageField` di `ProductFormDrawer.tsx`.
 
 ### API diproksikan lewat origin situs, jangan diubah jadi panggilan langsung
 

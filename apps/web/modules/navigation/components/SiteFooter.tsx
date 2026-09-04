@@ -1,6 +1,7 @@
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries/id";
-import { HQ } from "@/modules/home/constants/menu-data";
+import { getSiteSettings } from "@/modules/home/lib/site-settings";
+import { SocialIcon } from "@/components/ui/social-icons";
 import { BRAND, navCta, navItems } from "@/modules/navigation/constants/nav-items";
 
 /**
@@ -14,8 +15,37 @@ import { BRAND, navCta, navItems } from "@/modules/navigation/constants/nav-item
  * karena URL tokonya belum pernah diberikan dan menebak URL toko di halaman
  * publik jauh lebih berbahaya daripada membiarkan barisnya kosong.
  */
-export function SiteFooter({ dict, locale }: { dict: Dictionary; locale: Locale }) {
+/** Nama platform untuk pembaca layar. Panel berbahasa Indonesia, situs dua
+ *  bahasa, tapi nama merek tidak diterjemahkan di bahasa mana pun. */
+const SOCIAL_NAME: Record<string, string> = {
+  instagram: "Instagram",
+  facebook: "Facebook",
+  tiktok: "TikTok",
+  x: "X",
+  youtube: "YouTube",
+  threads: "Threads",
+  linkedin: "LinkedIn",
+  whatsapp: "WhatsApp",
+};
+
+/**
+ * Footer.
+ *
+ * KONTAK DAN SOSIAL MEDIA DATANG DARI BASIS DATA, bukan lagi dari konstanta HQ.
+ * Sebelumnya nomor telepon, alamat, dan satu tautan Instagram dikodekan
+ * langsung di modules/home/constants/menu-data.ts, jadi mengganti nomor berarti
+ * deploy ulang dan menambah TikTok berarti menulis kode. Sekarang keduanya
+ * dikelola di /kontak pada panel.
+ *
+ * IKON SOSIAL SELALU BERPASANGAN DENGAN NAMA PLATFORM yang terbaca pembaca
+ * layar. Bentuk ikon tidak boleh jadi satu-satunya pembawa makna, dan glifnya
+ * sendiri `aria-hidden`, jadi nama itu dibawa `aria-label` pada tautannya.
+ * Lihat components/ui/social-icons.tsx, yang juga menjelaskan kenapa glifnya
+ * bukan dari lucide.
+ */
+export async function SiteFooter({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const links = [...navItems(locale, dict), navCta(locale, dict)];
+  const { contact, social } = await getSiteSettings(locale);
 
   return (
     <footer className="site-footer" id="kontak-footer">
@@ -42,7 +72,7 @@ export function SiteFooter({ dict, locale }: { dict: Dictionary; locale: Locale 
           <dl className="footer-defs">
             <div>
               <dt>{dict.footer.hq}</dt>
-              <dd>{HQ.address}</dd>
+              <dd>{contact.address ?? ""}</dd>
             </div>
             <div>
               <dt>{dict.footer.farm}</dt>
@@ -53,21 +83,48 @@ export function SiteFooter({ dict, locale }: { dict: Dictionary; locale: Locale 
 
         <div className="footer-col">
           <h2 className="footer-heading">{dict.footer.contact}</h2>
+          {/* Tiap baris hanya muncul bila datanya ADA. Panel boleh
+              mengosongkan salah satunya, dan tautan dengan href kosong justru
+              menavigasi ke halaman itu sendiri. */}
           <ul className="footer-list">
-            <li>
-              <a href={HQ.phoneHref}>{HQ.phone}</a>
-            </li>
-            <li>
-              <a href={HQ.site.href} target="_blank" rel="noopener noreferrer">
-                {HQ.site.label}
-              </a>
-            </li>
-            <li>
-              <a href={HQ.instagram.href} target="_blank" rel="noopener noreferrer">
-                {HQ.instagram.label}
-              </a>
-            </li>
+            {contact.phone && contact.phoneHref ? (
+              <li>
+                <a href={contact.phoneHref}>{contact.phone}</a>
+              </li>
+            ) : null}
+            {contact.email ? (
+              <li>
+                <a href={`mailto:${contact.email}`}>{contact.email}</a>
+              </li>
+            ) : null}
+            {contact.siteUrl ? (
+              <li>
+                <a href={contact.siteUrl} target="_blank" rel="noopener noreferrer">
+                  {contact.siteLabel ?? contact.siteUrl}
+                </a>
+              </li>
+            ) : null}
           </ul>
+
+          {social.length > 0 ? (
+            <ul className="footer-social" aria-label={dict.footer.contact}>
+              {social.map((link) => (
+                <li key={link.platform}>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    /* Nama platform dibawa aria-label, karena glifnya sendiri
+                       aria-hidden. Tanpa ini tautannya terbaca sebagai "tautan"
+                       tanpa satu petunjuk pun tentang tujuannya. */
+                    aria-label={`${SOCIAL_NAME[link.platform]}${link.label ? `, ${link.label}` : ""}`}
+                  >
+                    <SocialIcon platform={link.platform} size={18} />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <p className="footer-body footer-shop">{dict.footer.shop}</p>
           <p className="footer-note">{dict.footer.shopNote}</p>
         </div>

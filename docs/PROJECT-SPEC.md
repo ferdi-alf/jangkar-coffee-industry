@@ -136,8 +136,12 @@ git dan repo membengkak dengan cepat.
 
 ### Rute admin
 
-Tidak pernah diawali `/admin`. Langsung `/dashboard`, `/product`, `/management-product`, dan
-seterusnya.
+Tidak pernah diawali `/admin`. Langsung `/dashboard`, `/menu`, `/ecommerce`, dan seterusnya.
+
+> **Diperbarui 2026-09-04 atas permintaan pemilik.** Daftar mutakhirnya ada di
+> `apps/web/shared/constants/routes.ts`. Yang berubah: `/management-product` menjadi `/menu`,
+> `/ecommerce` lahir sebagai pasangannya, dan `/timeline`, `/seo`, `/kontak`, `/profil`,
+> `/pengguna` ditambahkan. `/product` dan `/media` DIHAPUS.
 
 ### Input di admin
 
@@ -146,16 +150,34 @@ seterusnya.
 | Sampai 3 field | Dialog atau modal |
 | Field banyak | Drawer dari kanan ke kiri, berhenti di batas sidebar pada desktop |
 | Melihat detail data yang banyak | Drawer dari bawah ke atas, tinggi 85 persen layar |
-| Berhasil atau gagal | Toast sonner, posisi kiri atas |
+| Berhasil atau gagal | Toast sonner, posisi **kanan atas** (diubah dari kiri atas, 2026-09-04) |
 
 Drawer kanan memiliki tombol ikon di kiri atas berupa panah kiri. Diklik, drawer menutup dan
 tertarik kembali ke kanan. Berlaku sama untuk mode tambah maupun edit.
 
 Drawer bawah dapat ditutup dengan klik di luar, ditarik, atau tombol tutup.
 
+Satu pengecualian yang disepakati: halaman **Timeline** memakai MODAL meski medannya lima, karena
+pemilik proyek memintanya secara eksplisit. Bentuknya `shared/components/FormDialog.tsx`, modal
+lebih lebar dengan badan yang bisa digulir, dan ia komponen tersendiri supaya batas tiga medan pada
+`ConfirmDialog` tetap berlaku apa adanya alih-alih dilunakkan diam-diam.
+
+### Isi situs datang dari basis data
+
+Sejak 2026-09-04, teks sembilan seksi, menu outlet, menu keliling, produk ecommerce, timeline,
+outlet, kontak, sosial media, dan SEO semuanya dibaca situs dari basis data. Konstanta dan kamus
+tetap ada sebagai CADANGAN saat API tidak bisa dihubungi ketika build, dan tidak boleh dihapus.
+
+Yang masih hanya bisa diubah lewat deploy, atas keputusan pemilik: label navigasi, teks footer,
+kata marquee, foto hero, dan brand mark. Alasan foto hero teknis, ia elemen LCP.
+
 ### Input khusus
 
 - Input password selalu memiliki ikon mata untuk mengatur keterlihatan teks.
+- **Slug tidak lagi punya medan.** Server membuatnya dari judul Indonesia saat item dibuat, lalu
+  menguncinya. Lihat bagian Slug di CLAUDE.md untuk alasannya.
+- **Gambar diunggah langsung di form yang membutuhkannya**, lewat
+  `shared/components/MediaUploadField.tsx`. Halaman pustaka media dihapus.
 - Input berkas selalu drag and drop, dengan ikon berkas di tengah, keterangan jenis yang boleh
   diunggah beserta ukuran maksimum, dan kontainer berpembatas garis putus putus.
 

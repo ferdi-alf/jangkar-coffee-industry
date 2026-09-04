@@ -126,12 +126,17 @@ const id = {
     menuHeading: "Menu armada",
     favourite: "Favorit",
     today: { label: "Di mana hari ini", value: "Jadwal titik henti menyusul" },
+    /* Cadangan, ditimpa medan gambar di /content. */
+    logo: "/brand/keliling-logo.webp",
     logoAlt: "Logo Jangkar Keliling",
   },
   origin: {
     eyebrow: "Asal biji",
     heading: "Semendo, Sumatera Selatan",
     body: "Robusta dataran tinggi dari kebun di Kabupaten Muara Enim. Dibeli langsung dari petani, disangrai di Sako, Palembang.",
+    /* Jalur statis ini adalah CADANGAN. Nilai sungguhannya datang dari medan
+       gambar di /content pada panel, lihat i18n/site-dictionary.ts. */
+    image: "/rantai/kebun-semendo.webp",
     imageAlt: "Kebun kopi berteras di lereng Semendo, kabut pagi menggantung di lembah, seorang petani berjalan di antara barisan tanaman.",
   },
   contact: {

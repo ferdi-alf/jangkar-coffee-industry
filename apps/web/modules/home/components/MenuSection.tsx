@@ -1,5 +1,5 @@
 import type { Dictionary } from "@/i18n/dictionaries/id";
-import { OUTLET_MENU } from "@/modules/home/constants/menu-data";
+import type { MenuCategory } from "@/modules/home/constants/menu-data";
 
 /**
  * Seksi 3, menu outlet LENGKAP dalam satu seksi.
@@ -14,8 +14,13 @@ import { OUTLET_MENU } from "@/modules/home/constants/menu-data";
  *
  * `<dl>` dipilih, bukan tabel maupun daftar biasa, karena isinya memang
  * pasangan nama dan harga. Pembaca layar mengumumkannya sebagai pasangan.
+ *
+ * DATANYA KINI DARI BASIS DATA, bukan konstanta. Induknya mengambilnya lewat
+ * modules/home/lib/outlet-menu.ts, jadi harga yang disunting di /menu pada
+ * panel akhirnya benar-benar mengubah halaman ini. Judul kartunya adalah nama
+ * kategori sungguhan, jadi mengganti nama di /category ikut terlihat di sini.
  */
-export function MenuSection({ dict }: { dict: Dictionary }) {
+export function MenuSection({ dict, categories }: { dict: Dictionary; categories: MenuCategory[] }) {
   return (
     <section className="section menu-section" id="menu">
       <p className="eyebrow" data-reveal>
@@ -31,7 +36,7 @@ export function MenuSection({ dict }: { dict: Dictionary }) {
       </p>
 
       <div className="menu-columns">
-        {OUTLET_MENU.map((category) => (
+        {categories.map((category) => (
           <section className="menu-card" data-reveal data-spot key={category.id}>
             <h3 className="menu-card-heading">{category.name}</h3>
             <dl className="menu-list">
