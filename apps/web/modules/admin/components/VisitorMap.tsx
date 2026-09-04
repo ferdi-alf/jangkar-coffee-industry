@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useMemo } from "react";
+import WorldMap, { regions, type CountryContext, type ISOCode } from "react-svg-worldmap";
 
-import "leaflet/dist/leaflet.css";
-
-import { COUNTRY_CENTROIDS, countryName } from "@/modules/admin/constants/country-centroids";
+import { countryName } from "@/modules/admin/constants/country-centroids";
 
 export interface CountryVisits {
   country: string | null;
@@ -13,92 +12,105 @@ export interface CountryVisits {
 }
 
 /**
- * Peta dunia negara pengunjung.
+ * Peta pengunjung: negara yang berkunjung DIWARNAI, makin banyak makin pekat.
  *
- * LEAFLET POLOS, bukan react-leaflet dan bukan pustaka peta baru. Leaflet SUDAH
- * TERPASANG di apps/web dan sudah terbukti dipakai OutletMap di situs publik,
- * jadi peta ini tidak menambah satu dependensi pun. Pilihan lain, misalnya
- * react-simple-maps dengan TopoJSON dunia, berarti paket baru plus berkas
- * ratusan kilobyte untuk sesuatu yang cuma perlu menaruh lingkaran.
+ * MENGGANTIKAN PETA LEAFLET, dan penggantinya menyelesaikan dua hal sekaligus.
  *
- * Diimpor DINAMIS di dalam effect, jadi Leaflet baru diunduh saat dashboard
- * benar-benar dibuka, bukan ikut bundel setiap halaman panel.
+ * 1. BUG DI PONSEL. Leaflet memasang z-index 600 sampai 1000 pada pane penanda,
+ *    tooltip, dan kontrolnya, sedangkan sidebar panel hanya 60 dan scrim-nya 55.
+ *    Akibatnya membuka sidebar di layar kecil membuat isi peta tetap tercetak DI
+ *    ATAS sidebar. Peta ini SVG biasa tanpa satu pun z-index, jadi seluruh kelas
+ *    masalah itu hilang, bukan ditambal.
+ * 2. BENTUK YANG DIMINTA. Penanda titik tidak menjawab pertanyaan "negara mana
+ *    yang datang". Choropleth menjawabnya langsung: negaranya sendiri yang
+ *    berwarna.
  *
- * UKURAN LINGKARAN BUKAN SATU-SATUNYA PEMBAWA MAKNA. Aturan aksesibilitas
- * proyek melarang itu, dan lingkaran di peta dunia memang mustahil dibandingkan
- * dengan mata. Karena itu induknya SELALU merender daftar peringkat bertuliskan
- * angka di bawah peta, dan daftar itulah sumber kebenaran yang bisa dibaca
- * pembaca layar. Peta ini sendiri `aria-hidden`.
+ * `size="responsive"` membuat petanya mengikuti lebar kartunya, jadi tingginya
+ * tidak pernah melampaui ruang yang tersedia. Peta Leaflet sebelumnya memakai
+ * tinggi minimum tetap, dan itu sebab lain kenapa ia meluber di ponsel.
  *
- * Negara yang tidak ada di tabel titik tengah tidak digambar, tapi tetap ikut
- * di daftar peringkat, jadi tidak ada kunjungan yang hilang dari layar.
+ * WARNA DARI PALET CREST, bukan skala bawaan pustaka. Kuning cerah `--red-deep`
+ * untuk kunjungan paling sedikit sampai merah bata `--signal` untuk paling
+ * banyak. Keduanya warna Jangkar, dan rentangnya bergerak dari terang ke gelap
+ * sehingga urutannya terbaca bahkan pada layar yang buruk.
+ *
+ * WARNA TIDAK PERNAH JADI SATU-SATUNYA PEMBAWA MAKNA. Aturan aksesibilitas
+ * proyek melarangnya, dan lagipula negara sekecil Singapura mustahil terlihat
+ * pada peta dunia. Karena itu induknya SELALU merender daftar peringkat
+ * bertuliskan angka, dan daftar itulah sumber kebenarannya.
  */
+
+/* Ujung rentang warna, keduanya dari palet crest. */
+const LOW = "#E8C244"; // --red-deep, kuning cerah
+const HIGH = "#6B2218"; // --signal, merah bata
+/* Negara tanpa kunjungan. Sengaja abu netral, bukan versi paling pucat dari
+   rentang di atas, supaya "nol" tidak pernah salah dibaca sebagai "sedikit". */
+const EMPTY = "#E4E6EA";
+
+function lerpHex(from: string, to: string, t: number): string {
+  const parse = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [ar, ag, ab] = parse(from);
+  const [br, bg, bb] = parse(to);
+  const mix = (a: number, b: number) => Math.round(a + (b - a) * t);
+  return `#${[mix(ar!, br!), mix(ag!, bg!), mix(ab!, bb!)]
+    .map((v) => v.toString(16).padStart(2, "0"))
+    .join("")}`;
+}
+
+/** Kode ISO yang benar-benar bisa digambar pustaka ini. */
+const DRAWABLE = new Set(regions.map((r) => r.code.toUpperCase()));
+
 export function VisitorMap({ rows }: { rows: CountryVisits[] }) {
-  const holder = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = holder.current;
-    if (!el) return;
-    let map: { remove: () => void } | null = null;
-    let cancelled = false;
-
-    (async () => {
-      const L = (await import("leaflet")).default;
-      if (cancelled || !holder.current) return;
-
-      const instance = L.map(el, {
-        center: [12, 40],
-        zoom: 1,
-        minZoom: 1,
-        scrollWheelZoom: false,
-        attributionControl: true,
-        /* Kontrol zoom dimatikan. Kartunya hanya 30 persen lebar dashboard,
-           dan tombol zoom di ruang sesempit itu lebih sering tertekan tidak
-           sengaja daripada dipakai. */
-        zoomControl: false,
-      });
-      map = instance;
-
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 8,
-        attribution: "&copy; OpenStreetMap",
-      }).addTo(instance);
-
-      const plotted = rows.filter(
-        (row): row is CountryVisits & { country: string } =>
-          Boolean(row.country) && row.country! in COUNTRY_CENTROIDS,
-      );
-      const max = Math.max(1, ...plotted.map((row) => row.visits));
-
-      for (const row of plotted) {
-        const point = COUNTRY_CENTROIDS[row.country];
-        if (!point) continue;
-
-        /* Radius mengikuti AKAR jumlah, bukan jumlah itu sendiri, supaya yang
-           dibaca mata adalah LUAS lingkaran dan bukan jari-jarinya. Tanpa akar,
-           negara dengan 100 kunjungan tampak sepuluh ribu kali lebih besar
-           daripada yang punya 1. */
-        const radius = 5 + 13 * Math.sqrt(row.visits / max);
-
-        L.circleMarker(point, {
-          radius,
-          color: "#B08A16",
-          weight: 1.5,
-          fillColor: "#B08A16",
-          fillOpacity: 0.35,
-        })
-          .bindTooltip(`${countryName(row.country)}: ${row.visits} kunjungan`, { direction: "top" })
-          .addTo(instance);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      map?.remove();
+  const { data, undrawable } = useMemo(() => {
+    const withCode = rows.filter(
+      (row): row is CountryVisits & { country: string } => Boolean(row.country),
+    );
+    return {
+      data: withCode
+        .filter((row) => DRAWABLE.has(row.country.toUpperCase()))
+        .map((row) => ({ country: row.country.toUpperCase() as ISOCode, value: row.visits })),
+      /* Negara yang punya kunjungan tapi TIDAK ADA bentuknya di peta, misalnya
+         Singapura dan Hong Kong yang terlalu kecil untuk digambar pada skala
+         dunia. Disebut apa adanya di bawah peta, karena kunjungan yang hilang
+         dari layar tanpa penjelasan jauh lebih membingungkan. */
+      undrawable: withCode.filter((row) => !DRAWABLE.has(row.country.toUpperCase())),
     };
   }, [rows]);
 
+  function style({ countryValue, minValue, maxValue }: CountryContext<number>) {
+    if (countryValue === undefined) {
+      return { fill: EMPTY, stroke: "#FFFFFF", strokeWidth: 0.4, fillOpacity: 1 };
+    }
+    /* AKAR, bukan linear. Dengan satu negara yang jauh lebih ramai daripada
+       sisanya, skala linear membuat semua negara lain tampak nyaris seragam.
+       Akar merapatkan ujung atas sehingga selisih di ujung bawah tetap terbaca.
+       Saat hanya ada satu negara, min sama dengan max: ia diberi nilai penuh. */
+    const span = maxValue - minValue;
+    const t = span === 0 ? 1 : Math.sqrt((countryValue - minValue) / span);
+    return { fill: lerpHex(LOW, HIGH, t), stroke: "#FFFFFF", strokeWidth: 0.4, fillOpacity: 1 };
+  }
+
   return (
-    <div className="adm-map" ref={holder} aria-hidden="true" role="presentation" />
+    <div className="adm-choropleth">
+      <WorldMap
+        data={data}
+        size="responsive"
+        backgroundColor="transparent"
+        borderColor="#FFFFFF"
+        strokeOpacity={0.6}
+        styleFunction={style}
+        tooltipBgColor="#241012"
+        tooltipTextColor="#F5F3F1"
+        tooltipTextFunction={({ countryCode, countryValue }) =>
+          `${countryName(countryCode)}: ${countryValue ?? 0} kunjungan`
+        }
+      />
+      {undrawable.length > 0 ? (
+        <p className="adm-hint">
+          Terlalu kecil untuk digambar di peta, lihat daftar di bawah:{" "}
+          {undrawable.map((row) => countryName(row.country)).join(", ")}.
+        </p>
+      ) : null}
+    </div>
   );
 }

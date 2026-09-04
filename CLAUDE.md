@@ -416,6 +416,37 @@ Kategori pada `/menu`, dan `console.warn` menyebut SKU-nya saat build.
 **Konstanta dan kamus TIDAK boleh dihapus.** Keduanya berhenti jadi sumber kebenaran tapi tetap
 jadi cadangan saat API tidak bisa dihubungi ketika build.
 
+### Peta pengunjung: choropleth SVG, JANGAN kembalikan ke Leaflet
+
+Peta negara pengunjung di dashboard memakai `react-svg-worldmap`, bukan Leaflet,
+dan penggantian itu menyelesaikan dua hal sekaligus.
+
+**Bug di ponsel.** Leaflet memasang z-index 600 sampai 1000 pada pane penanda,
+tooltip, dan kontrolnya. Sidebar panel hanya 60 dan scrim-nya 55. Akibatnya
+membuka sidebar di layar kecil membuat isi peta tetap tercetak DI ATAS sidebar.
+SVG biasa tidak punya satu pun z-index, jadi kelas masalah itu hilang, bukan
+ditambal dengan menaikkan angka.
+
+**Bentuk yang diminta pemilik.** Penanda titik tidak menjawab "negara mana yang
+datang". Choropleth menjawabnya langsung: negaranya sendiri yang berwarna, dan
+makin banyak kunjungan makin pekat.
+
+Warnanya dari palet crest, bukan skala bawaan pustaka: `#E8C244` (`--red-deep`)
+untuk paling sedikit sampai `#6B2218` (`--signal`) untuk paling banyak. Negara
+tanpa kunjungan abu netral, sengaja bukan versi paling pucat dari rentang itu,
+supaya "nol" tidak pernah salah dibaca sebagai "sedikit". Skalanya AKAR bukan
+linear, karena satu negara yang jauh lebih ramai akan membuat sisanya tampak
+seragam.
+
+Leaflet TETAP TERPASANG dan masih dipakai `OutletMap` di situs publik. Jangan
+dicabut dari dependensi.
+
+**Sekitar 40 negara terlalu kecil untuk digambar pustaka ini**, termasuk
+Singapura dan Hong Kong. Itu bukan bug: pada skala dunia bentuknya memang tidak
+terlihat. Mereka tetap muncul di daftar peringkat bertuliskan angka di bawah
+peta, dan komponen menyebut namanya secara eksplisit. Daftar itu juga yang
+memenuhi aturan bahwa warna tidak boleh jadi satu-satunya pembawa makna.
+
 ### Bug fokus input: jangan taruh `onClose` di dependensi effect
 
 Keempat komponen overlay (`FormDrawer`, `FormDialog`, `ConfirmDialog`, `DetailDrawer`) merebut

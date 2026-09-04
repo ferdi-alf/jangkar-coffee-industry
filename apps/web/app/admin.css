@@ -856,16 +856,25 @@
   height: 100%;
   min-height: 0;
 }
-.adm-map {
+/* Choropleth SVG, MENGGANTIKAN peta Leaflet.
+   `min-height` sengaja TIDAK dipasang. Itu justru sebab peta lama meluber di
+   ponsel: tinggi minimum tetap memaksa kartu lebih tinggi daripada ruang yang
+   ada. SVG-nya `size="responsive"`, jadi tingginya mengikuti lebarnya sendiri. */
+.adm-choropleth {
   flex: 1 1 auto;
-  min-height: 150px;
-  border-radius: var(--a-radius-sm);
-  overflow: hidden;
-  background: var(--a-bg);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
 }
-/* Tile diredupkan sedikit supaya penanda emas tetap yang paling menonjol. */
-.adm-map .leaflet-tile-pane { filter: grayscale(0.5) contrast(0.92) brightness(1.04); }
-.adm-map .leaflet-container { background: var(--a-bg); font: inherit; }
+.adm-choropleth svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+}
+.adm-choropleth .adm-hint { margin: 0; }
 
 .adm-geo-list {
   flex: none;
