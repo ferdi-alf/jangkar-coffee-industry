@@ -15,7 +15,11 @@ import { healthRouter } from "./modules/health/health.routes.js";
 import { mediaRouter } from "./modules/media/media.routes.js";
 import { outletRouter } from "./modules/outlet/outlet.routes.js";
 import { productRouter } from "./modules/product/product.routes.js";
+import { settingsRouter } from "./modules/settings/settings.routes.js";
 import { statsRouter } from "./modules/stats/stats.routes.js";
+import { timelineRouter } from "./modules/timeline/timeline.routes.js";
+import { trackRouter } from "./modules/track/track.routes.js";
+import { userRouter } from "./modules/user/user.routes.js";
 
 /**
  * Membangun aplikasi Express.
@@ -73,6 +77,10 @@ export function createApp(): Express {
   app.use("/content", contentRouter);
   app.use("/media", mediaRouter);
   app.use("/stats", statsRouter);
+  app.use("/settings", settingsRouter);
+  app.use("/timeline", timelineRouter);
+  app.use("/users", userRouter);
+  app.use("/track", trackRouter);
 
   app.use(notFound);
   app.use(errorHandler);

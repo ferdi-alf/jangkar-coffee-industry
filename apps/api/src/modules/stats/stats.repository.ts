@@ -55,25 +55,33 @@ export async function overview(supabase: SupabaseClient): Promise<StatsOverview>
         .eq("channel", "keliling").eq("available", true)),
   ]);
 
-  /* Pengelompokan per hari dilakukan di sini, bukan lewat SQL date_trunc,
-     karena PostgREST tidak mengekspos GROUP BY. Jumlah barisnya kecil, 30 hari
-     pesan kontak, jadi menariknya lalu menghitung di memori jauh lebih murah
-     daripada menambah view atau fungsi RPC hanya untuk ini. */
-  const { data: contactRows } = await supabase
-    .from("contact_message")
-    .select("created_at")
-    .gte("created_at", since.toISOString())
-    .limit(5000);
+  /* KUNJUNGAN DIAGREGASI DI POSTGRES, bukan di sini.
+     Pesan kontak dulu dihitung di memori karena jumlahnya kecil, tiga puluh
+     hari dari satu form. Kunjungan tidak kecil: satu baris per muat halaman.
+     Menariknya ke Node lalu menjumlahkannya akan berubah dari lambat menjadi
+     kehabisan memori pada situs yang ramai, jadi ia memakai fungsi
+     visits_by_day dan visits_by_country dari migrasi 20260903_0230. */
+  const [dayRes, countryRes] = await Promise.all([
+    supabase.rpc("visits_by_day", { days: 30 }),
+    supabase.rpc("visits_by_country", { days: 30 }),
+  ]);
+  if (dayRes.error) throw new Error(dayRes.error.message);
+  if (countryRes.error) throw new Error(countryRes.error.message);
 
-  const byDay = new Map<string, number>();
+  /* Hari tanpa kunjungan TIDAK punya baris di basis data, tapi grafik butuh
+     sumbu yang utuh. Tanpa pengisian ini, satu hari sepi akan tampak seperti
+     garis yang melompati waktu, bukan seperti lembah. */
+  const visitDays = new Map<string, { visits: number; uniques: number }>();
   for (let i = 0; i < 30; i += 1) {
     const d = new Date(since);
     d.setUTCDate(since.getUTCDate() + i);
-    byDay.set(isoDate(d), 0);
+    visitDays.set(isoDate(d), { visits: 0, uniques: 0 });
   }
-  for (const row of ((contactRows ?? []) as unknown as Row[])) {
-    const key = String(row.created_at).slice(0, 10);
-    if (byDay.has(key)) byDay.set(key, (byDay.get(key) ?? 0) + 1);
+  for (const row of ((dayRes.data ?? []) as unknown as Row[])) {
+    const key = String(row.day).slice(0, 10);
+    if (visitDays.has(key)) {
+      visitDays.set(key, { visits: Number(row.visits ?? 0), uniques: Number(row.uniques ?? 0) });
+    }
   }
 
   const translation = await Promise.all(
@@ -110,7 +118,16 @@ export async function overview(supabase: SupabaseClient): Promise<StatsOverview>
       contactNew,
       contactTotal,
     },
-    contactByDay: [...byDay.entries()].map(([date, n]) => ({ date, count: n })),
+    visitsByDay: [...visitDays.entries()].map(([date, v]) => ({
+      date,
+      visits: v.visits,
+      uniques: v.uniques,
+    })),
+    visitsByCountry: ((countryRes.data ?? []) as unknown as Row[]).map((r) => ({
+      country: (r.country as string) ?? null,
+      visits: Number(r.visits ?? 0),
+      uniques: Number(r.uniques ?? 0),
+    })),
     translation,
     channelCounts: [
       { channel: "outlet", count: outletMenu },

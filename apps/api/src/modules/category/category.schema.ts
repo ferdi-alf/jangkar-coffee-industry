@@ -6,7 +6,14 @@ const Translation = z.object({
 });
 
 export const CategoryInput = z.object({
-  slug: z.string().trim().regex(/^[a-z0-9-]+$/, "slug.invalid").max(80, "slug.tooLong"),
+  /* Opsional, dibuat dari nama Indonesia saat kategori dibuat. Lihat
+     category.service.ts untuk alasan ia dikunci setelah itu. */
+  slug: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9-]+$/, "slug.invalid")
+    .max(80, "slug.tooLong")
+    .optional(),
   sortOrder: z.number().int().min(0).optional(),
   status: z.enum(["draft", "published", "archived"]).optional(),
   /* Dua bahasa wajib, sama seperti produk. */

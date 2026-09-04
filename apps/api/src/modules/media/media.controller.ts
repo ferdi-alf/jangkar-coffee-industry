@@ -98,6 +98,32 @@ export async function postUpload(req: Request, res: Response): Promise<void> {
   }
 }
 
+/**
+ * Hapus berdasarkan URL, dipakai saat gambar di form diganti.
+ *
+ * Terdaftar pada koleksi (`DELETE /media?url=...`), bukan sebagai segmen jalur,
+ * karena URL penuh memuat garis miring dan tidak bisa jadi satu parameter rute
+ * tanpa penyandian ganda yang mudah salah di kedua sisi.
+ */
+export async function deleteByUrl(req: Request, res: Response): Promise<void> {
+  const supabase = db(res);
+  if (!supabase) return;
+
+  const url = typeof req.query.url === "string" ? req.query.url : "";
+  if (!url) {
+    sendError(res, 422, "VALIDATION_ERROR", "Parameter url wajib diisi.", [
+      { field: "url", message: "url.required" },
+    ]);
+    return;
+  }
+
+  try {
+    sendData(res, 200, await service.deleteMediaByUrl(supabase, req.user!, url));
+  } catch (error) {
+    handle(res, error);
+  }
+}
+
 export async function deleteOne(req: Request, res: Response): Promise<void> {
   const supabase = db(res);
   if (!supabase) return;

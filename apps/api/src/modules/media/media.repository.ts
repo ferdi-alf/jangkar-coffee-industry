@@ -56,6 +56,24 @@ export async function findById(supabase: SupabaseClient, id: string): Promise<Me
   return data ? toItem(supabase, data as unknown as Row) : null;
 }
 
+/**
+ * Mencari media dari JALUR OBJEKNYA, bukan dari id.
+ *
+ * Dipakai saat gambar diganti di form. Kolom tujuan di produk dan SEO hanya
+ * menyimpan URL publik, bukan id media, karena kolom itu juga harus bisa berisi
+ * jalur statis lama seperti `/roastery/kopi-bubuk-80gr.webp`. Jadi satu-satunya
+ * pegangan yang tersisa saat hendak membuang berkas lama adalah jalurnya, dan
+ * `media.path` memang unik.
+ */
+export async function findByPath(
+  supabase: SupabaseClient,
+  path: string,
+): Promise<MediaItem | null> {
+  const { data, error } = await supabase.from("media").select(SELECT).eq("path", path).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? toItem(supabase, data as unknown as Row) : null;
+}
+
 export async function upload(
   supabase: SupabaseClient,
   path: string,

@@ -77,6 +77,42 @@ export const loginLimiter = rateLimit({
   handler: handler("Terlalu banyak percobaan masuk. Coba lagi satu menit lagi."),
 });
 
+/**
+ * 5 per menit untuk perubahan profil, dikunci per PENGGUNA.
+ *
+ * Endpoint ganti kata sandi memverifikasi kata sandi LAMA, jadi ia adalah
+ * oracle tebak-menebak seperti halnya form login. Bedanya, penyerang di sini
+ * sudah memegang sesi yang sah, misalnya layar panel yang ditinggal terbuka di
+ * gerai, sehingga kunci per IP tidak berarti apa-apa: ia duduk di IP yang sama
+ * dengan korbannya. Karena itu kuncinya id pengguna, bukan alamat.
+ */
+export const passwordLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 5,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip ?? "-"),
+  handler: handler("Terlalu banyak percobaan. Coba lagi satu menit lagi."),
+});
+
+/**
+ * Pencatat kunjungan, 600 per menit.
+ *
+ * Jauh lebih longgar daripada limiter lain, dan memang harus: yang
+ * memanggilnya adalah middleware situs SATU KALI PER MUAT HALAMAN, jadi
+ * angka ini adalah lantai kapasitas situs, bukan pagar keamanan. Pagar
+ * sesungguhnya untuk endpoint itu adalah header rahasia TRACK_SECRET, bukan
+ * batas laju. Yang dicegah di sini hanya satu klien rusak yang mengulang tanpa
+ * henti sampai menghabiskan kuota basis data.
+ */
+export const trackLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 600,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  handler: handler("Terlalu banyak permintaan."),
+});
+
 /** Unggahan berkas jauh lebih mahal daripada permintaan biasa. */
 export const uploadLimiter = rateLimit({
   windowMs: 10 * 60_000,

@@ -4,6 +4,7 @@ import type { ListQuery, Locale } from "../../shared/contracts/list.js";
 import type { AuthUser } from "../../shared/middleware/auth.js";
 import { writeAudit } from "../../shared/utils/audit.js";
 import { listMeta } from "../../shared/utils/pagination.js";
+import { uniqueSlug } from "../../shared/utils/slug.js";
 
 import type { CategoryItem } from "./category.contract.js";
 import type { CategoryInput, CategoryPatch } from "./category.schema.js";
@@ -26,13 +27,15 @@ export async function getCategory(
   return found;
 }
 
+/** Slug lahir dari nama Indonesia, sama seperti produk. */
 export async function createCategory(
   supabase: SupabaseClient,
   actor: AuthUser,
   input: CategoryInput,
 ) {
-  const id = await repo.create(supabase, input);
-  await writeAudit(supabase, actor, "create", "category", id, `Kategori ${input.slug} dibuat.`);
+  const slug = input.slug ?? (await uniqueSlug(supabase, "category", input.translations.id.name));
+  const id = await repo.create(supabase, { ...input, slug });
+  await writeAudit(supabase, actor, "create", "category", id, `Kategori ${slug} dibuat.`);
   return { id };
 }
 
@@ -44,7 +47,15 @@ export async function updateCategory(
 ) {
   const found = await repo.findById(supabase, id, "id");
   if (!found) throw new NotFound("Kategori tidak ditemukan.");
-  await repo.update(supabase, id, input);
+
+  /* Slug dibuang dari patch, dan DI SINI taruhannya paling tinggi di seluruh
+     proyek: `category.slug === "non-coffee"` adalah aturan yang memisahkan
+     kelompok Coffee dan Non-Coffee pada menu keliling di situs, lihat
+     apps/web/modules/home/lib/keliling-menu.ts. Membiarkan slug ikut berubah
+     saat nama kategori disunting berarti empat item bisa pindah kelompok tanpa
+     satu pun pesan galat. */
+  const { slug: _ignored, ...patch } = input;
+  await repo.update(supabase, id, patch);
   await writeAudit(supabase, actor, "update", "category", id, `Kategori ${found.slug} diubah.`);
 }
 

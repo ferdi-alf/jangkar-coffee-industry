@@ -5,7 +5,7 @@ import { requireAuth, requireRole } from "../../shared/middleware/auth.js";
 import { requireCsrf } from "../../shared/middleware/csrf.js";
 import { uploadLimiter } from "../../shared/middleware/rateLimit.js";
 
-import { deleteOne, getList, getOne, postUpload } from "./media.controller.js";
+import { deleteByUrl, deleteOne, getList, getOne, postUpload } from "./media.controller.js";
 import { MAX_UPLOAD_BYTES } from "./media.contract.js";
 
 /**
@@ -40,4 +40,7 @@ mediaRouter.post(
   upload.single("file"),
   postUpload,
 );
+/* Koleksi lebih dulu, baru `/:id`. Terbalik pun sebenarnya tidak bentrok di
+   Express, tapi urutan ini yang terbaca sesuai bentuknya. */
+mediaRouter.delete("/", requireAuth, requireRole("owner"), requireCsrf, deleteByUrl);
 mediaRouter.delete("/:id", requireAuth, requireRole("owner"), requireCsrf, deleteOne);

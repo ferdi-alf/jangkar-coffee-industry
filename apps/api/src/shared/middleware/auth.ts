@@ -91,6 +91,55 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 }
 
 /**
+ * Auth OPSIONAL: mengisi req.user kalau sesinya sah, dan tidak pernah menolak.
+ *
+ * Ada untuk endpoint yang melayani dua pemakai lewat satu rute, dan sejauh ini
+ * hanya `GET /timeline`. Tanpa sesi ia mengembalikan tonggak `published` saja
+ * dan sudah diratakan ke satu bahasa: itu yang dibaca situs. Dengan sesi, draft
+ * ikut keluar beserta kedua bahasanya: itu yang dibaca panel.
+ *
+ * TIDAK PERNAH MENOLAK, dan itu justru intinya. Cookie basi, basis data mati,
+ * atau akun yang baru dinonaktifkan semuanya berakhir sama: req.user dibiarkan
+ * kosong dan permintaan diteruskan sebagai anonim. Kalau ia bisa menolak,
+ * memasangnya di rute publik akan mengubah situs jadi ikut mati setiap kali
+ * seorang admin membuka halaman dengan cookie kedaluwarsa.
+ *
+ * Ia TIDAK boleh dipakai sebagai pagar. Yang menjaga tetap requireAuth dan
+ * requireRole, dan keduanya harus tetap dipasang pada setiap rute yang menulis.
+ */
+export async function attachUser(req: Request, _res: Response, next: NextFunction): Promise<void> {
+  try {
+    const cookies = req.cookies as Record<string, unknown> | undefined;
+    const token = cookies?.[ACCESS_COOKIE];
+    if (typeof token !== "string" || token.length === 0) return next();
+
+    const supabase = getSupabase();
+    if (!supabase) return next();
+
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user) return next();
+
+    const { data: profile } = await supabase
+      .from("admin_user")
+      .select("user_id, email, name, role, is_active")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+    if (!profile || profile.is_active !== true) return next();
+
+    req.user = {
+      id: profile.user_id as string,
+      email: profile.email as string,
+      name: profile.name as string,
+      role: profile.role as Role,
+    };
+  } catch {
+    /* Sengaja ditelan. Lihat alasan di atas: rute publik tidak boleh ikut mati
+       hanya karena pemeriksaan sesi yang memang opsional gagal. */
+  }
+  next();
+}
+
+/**
  * Pagar peran. Dipakai untuk yang hanya boleh disentuh owner.
  *
  * Aturan produk dari PROJECT-SPEC: barista boleh mengubah penanda habis, tidak

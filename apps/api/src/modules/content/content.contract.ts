@@ -1,4 +1,13 @@
-export type ContentKind = "text" | "longtext" | "list";
+/**
+ * `image` menyimpan URL gambar, bukan teks.
+ *
+ * Nilainya tetap hidup di page_content_translation seperti medan lain, dan
+ * KEDUA BAHASA sengaja diisi nilai yang sama karena URL gambar tidak
+ * bergantung bahasa. Editor panel yang menjaga keduanya tetap sinkron dengan
+ * hanya menampilkan satu pengunggah. Alasan lengkapnya di migrasi
+ * 20260904_0100_content_image.sql.
+ */
+export type ContentKind = "text" | "longtext" | "list" | "image";
 
 export interface ContentField {
   id: string;

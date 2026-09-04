@@ -14,11 +14,17 @@ const Translation = z.object({
 
 export const ProductInput = z.object({
   sku: z.string().trim().min(1, "sku.required").max(40, "sku.tooLong"),
+  /* SLUG OPSIONAL, dan form panel memang tidak lagi mengirimkannya. Kalau
+     kosong, service membuatnya dari judul Indonesia. Ia tetap DITERIMA di sini
+     supaya skrip seed dan pemanggil lama tidak patah, tapi lihat
+     product.service.ts: pada UPDATE nilainya dibuang, karena slug adalah
+     identitas dan tidak boleh ikut berubah saat judul disunting. */
   slug: z
     .string()
     .trim()
     .regex(/^[a-z0-9-]+$/, "slug.invalid")
-    .max(80, "slug.tooLong"),
+    .max(80, "slug.tooLong")
+    .optional(),
   categoryId: z.uuid("category.invalid").nullable().optional(),
   basePrice: z.number().int("price.integer").min(0, "price.negative").nullable().optional(),
   priceNote: z.string().trim().max(80, "priceNote.tooLong").nullable().optional(),

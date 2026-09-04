@@ -4,6 +4,7 @@ import type { ListQuery, Locale } from "../../shared/contracts/list.js";
 import type { AuthUser } from "../../shared/middleware/auth.js";
 import { listMeta } from "../../shared/utils/pagination.js";
 import { writeAudit } from "../../shared/utils/audit.js";
+import { uniqueSlug } from "../../shared/utils/slug.js";
 
 import { PRODUCT_DETAIL_PARTS, type ProductDetailPart } from "./product.constants.js";
 import type { Channel, ProductDetail, ProductListItem, ProductStatus } from "./product.contract.js";
@@ -54,12 +55,22 @@ export async function getProduct(
   return product;
 }
 
+/**
+ * SLUG DIBUAT DI SINI, bukan diketik di form.
+ *
+ * Form panel tidak lagi punya medan slug. Kalau pemanggil tidak mengirimnya,
+ * slug lahir dari judul Indonesia dan diberi akhiran angka bila sudah terpakai:
+ * "Americano" dua kali menghasilkan `americano` lalu `americano-2`. Slug yang
+ * dikirim eksplisit tetap dihormati, supaya skrip seed tetap bisa menentukan
+ * nilainya sendiri.
+ */
 export async function createProduct(
   supabase: SupabaseClient,
   actor: AuthUser,
   input: ProductInput,
 ): Promise<{ id: string }> {
-  const id = await repo.create(supabase, input);
+  const slug = input.slug ?? (await uniqueSlug(supabase, "product", input.translations.id.title));
+  const id = await repo.create(supabase, { ...input, slug });
   await writeAudit(supabase, actor, "create", "product", id, `Produk ${input.sku} dibuat.`);
   return { id };
 }
@@ -72,7 +83,15 @@ export async function updateProduct(
 ): Promise<void> {
   const existing = await repo.findById(supabase, id, "id", []);
   if (!existing) throw new NotFound("Produk tidak ditemukan.");
-  await repo.update(supabase, id, input);
+
+  /* SLUG DIBUANG DARI PATCH, selalu, dan ini yang membuat "dikunci" jadi benar
+     di API dan bukan sekadar di form. Slug adalah identitas: ia sudah masuk
+     tautan, sudah tercetak di HTML statis, dan untuk kategori ia bahkan
+     memutuskan pengelompokan menu keliling. Kalau ia boleh ikut berubah saat
+     judul disunting, satu kali ganti nama bisa merusak hal-hal itu tanpa satu
+     pun pesan galat. Lihat shared/utils/slug.ts. */
+  const { slug: _ignored, ...patch } = input;
+  await repo.update(supabase, id, patch);
   await writeAudit(supabase, actor, "update", "product", id, `Produk ${existing.sku} diubah.`);
 }
 

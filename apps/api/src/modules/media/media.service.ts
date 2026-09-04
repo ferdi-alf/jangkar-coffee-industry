@@ -43,9 +43,12 @@ export async function uploadMedia(
   actor: AuthUser,
   file: { buffer: Buffer; mimetype: string; size: number },
   alt: Record<"id" | "en", string>,
-): Promise<{ id: string }> {
+): Promise<MediaItem> {
   if (file.size > MAX_UPLOAD_BYTES) {
-    throw new Rejected("FILE_TOO_LARGE", "Berkas melebihi batas 5 MB.");
+    throw new Rejected(
+      "FILE_TOO_LARGE",
+      `Berkas melebihi batas ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB.`,
+    );
   }
   if (!(ALLOWED_MIME as readonly string[]).includes(file.mimetype)) {
     throw new Rejected("MIME_NOT_ALLOWED", "Jenis berkas ini tidak diizinkan.");
@@ -66,7 +69,50 @@ export async function uploadMedia(
     alt,
   );
   await writeAudit(supabase, actor, "create", "media", id, `Media ${path} diunggah.`);
-  return { id };
+
+  /* Item UTUH dikembalikan, bukan sekadar id, karena yang dibutuhkan pemanggil
+     adalah URL publiknya: form menyimpan URL itu ke product.image_path atau ke
+     medan gambar SEO. Mengembalikan id saja memaksa klien menembak GET kedua
+     hanya untuk merangkai URL yang sudah diketahui server. */
+  const created = await repo.findById(supabase, id);
+  if (!created) throw new NotFound("Media baru tidak bisa dibaca kembali.");
+  return created;
+}
+
+/**
+ * Menghapus media berdasarkan URL PUBLIKNYA.
+ *
+ * Dipakai saat gambar di form diganti atau dilepas. URL yang bukan milik
+ * storage kita, misalnya jalur statis lama di public/, TIDAK dianggap galat:
+ * tidak ada yang perlu dihapus, jadi fungsi ini selesai tanpa melakukan apa pun.
+ * Melempar 404 di situ hanya akan membuat form gagal menyimpan karena
+ * pembersihan yang sebenarnya tidak diperlukan.
+ */
+export async function deleteMediaByUrl(
+  supabase: SupabaseClient,
+  actor: AuthUser,
+  url: string,
+): Promise<{ deleted: boolean }> {
+  const marker = "/storage/v1/object/public/";
+  const at = url.indexOf(marker);
+  if (at === -1) return { deleted: false };
+
+  /* Sisa URL berbentuk `<bucket>/<path>`; bucketnya dibuang, jalurnya dipakai.
+     Query string dari transformasi gambar ikut dipotong kalau ada. */
+  /* `?? ""` karena noUncheckedIndexedAccess menganggap [0] bisa undefined.
+     Praktis tidak mungkin di sini, split selalu memberi minimal satu unsur,
+     tapi menuruti pemeriksanya lebih murah daripada memasang `!`. */
+  const after = url.slice(at + marker.length).split("?")[0] ?? "";
+  const slash = after.indexOf("/");
+  if (slash === -1) return { deleted: false };
+  const path = decodeURIComponent(after.slice(slash + 1));
+
+  const found = await repo.findByPath(supabase, path);
+  if (!found) return { deleted: false };
+
+  await repo.remove(supabase, found);
+  await writeAudit(supabase, actor, "delete", "media", found.id, `Media ${found.path} dihapus.`);
+  return { deleted: true };
 }
 
 export async function getMedia(supabase: SupabaseClient, id: string): Promise<MediaItem> {

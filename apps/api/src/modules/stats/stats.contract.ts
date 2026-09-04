@@ -17,8 +17,24 @@ export interface StatsOverview {
     contactNew: number;
     contactTotal: number;
   };
-  /** Pesan kontak per hari, 30 hari terakhir. */
-  contactByDay: { date: string; count: number }[];
+  /**
+   * Kunjungan situs per hari, 30 hari terakhir.
+   *
+   * MENGGANTIKAN grafik pesan kontak masuk, atas permintaan pemilik proyek.
+   * `visits` adalah jumlah muat halaman, `uniques` jumlah hash pengunjung yang
+   * berbeda pada hari itu. Keduanya dikirim karena keduanya menjawab pertanyaan
+   * berbeda dan tidak ada satu pun yang bisa dihitung dari yang lain.
+   *
+   * BATAS YANG HARUS DIINGAT SIAPA PUN YANG MEMBACA ANGKA INI: ia menghitung
+   * MUAT HALAMAN, bukan manusia. Bot yang menyamar sebagai peramban tetap ikut
+   * terhitung, dan kunjungan dari lokal tidak punya negara sama sekali.
+   */
+  visitsByDay: { date: string; visits: number; uniques: number }[];
+  /**
+   * Kunjungan per negara, 30 hari terakhir, urut terbanyak.
+   * `country` null berarti negaranya tidak diketahui, yang normal di lokal.
+   */
+  visitsByCountry: { country: string | null; visits: number; uniques: number }[];
   /**
    * Kelengkapan terjemahan. Ini metrik yang benar-benar berguna di sini:
    * situsnya dua bahasa, dan medan yang tertinggal di satu bahasa adalah lubang
