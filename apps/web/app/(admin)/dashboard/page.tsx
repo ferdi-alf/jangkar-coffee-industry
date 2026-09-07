@@ -65,6 +65,7 @@ interface Overview {
     contactNew: number;
     contactTotal: number;
   };
+  trackingConfigured: boolean;
   visitsByDay: { date: string; visits: number; uniques: number }[];
   visitsByCountry: { country: string | null; visits: number; uniques: number }[];
   translation: { entity: string; total: number; id: number; en: number }[];
@@ -132,6 +133,18 @@ export default function DashboardPage() {
           title="Kunjungan situs"
           description="30 hari terakhir. Menghitung muat halaman, bukan orang, jadi bot ikut terhitung."
         >
+          {/* PERINGATAN YANG BISA DITINDAKLANJUTI, bukan grafik kosong.
+              Tanpa TRACK_SECRET pencatatnya mati total, dan grafik rata nol
+              terlihat persis sama dengan situs yang memang belum dikunjungi.
+              Membedakan keduanya adalah selisih antara "sabar menunggu" dan
+              "ada yang harus saya isi di Vercel". */}
+          {data && !data.trackingConfigured ? (
+            <p className="adm-error" role="status" style={{ marginBottom: 10 }}>
+              Pencatat kunjungan belum menyala: <code>TRACK_SECRET</code> belum diisi. Isi nilai
+              yang SAMA PERSIS di proyek web dan proyek API pada Vercel, lalu deploy ulang. Selama
+              kosong, tidak ada satu kunjungan pun yang tercatat.
+            </p>
+          ) : null}
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
               data={data?.visitsByDay ?? []}

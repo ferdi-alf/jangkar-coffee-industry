@@ -43,9 +43,17 @@ export interface CountryVisits {
 /* Ujung rentang warna, keduanya dari palet crest. */
 const LOW = "#E8C244"; // --red-deep, kuning cerah
 const HIGH = "#6B2218"; // --signal, merah bata
-/* Negara tanpa kunjungan. Sengaja abu netral, bukan versi paling pucat dari
-   rentang di atas, supaya "nol" tidak pernah salah dibaca sebagai "sedikit". */
-const EMPTY = "#E4E6EA";
+/* Negara tanpa kunjungan.
+ *
+ * SELURUH NEGARA TETAP BERWARNA, atas permintaan pemilik proyek: peta yang
+ * seluruhnya abu terbaca seperti komponen mati, bukan seperti peta yang memang
+ * belum punya data. Warnanya pasir hangat, masih keluarga palet crest.
+ *
+ * Tapi ia SENGAJA DI LUAR rentang kuning ke merah di atas, bukan sekadar versi
+ * paling pucatnya. Kalau nol memakai ujung terpucat dari rentang yang sama, ia
+ * akan terbaca sebagai "sedikit kunjungan", dan itu kebohongan yang paling
+ * mudah dipercaya. */
+const EMPTY = "#EDE6D6";
 
 function lerpHex(from: string, to: string, t: number): string {
   const parse = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -105,6 +113,19 @@ export function VisitorMap({ rows }: { rows: CountryVisits[] }) {
           `${countryName(countryCode)}: ${countryValue ?? 0} kunjungan`
         }
       />
+      {/* LEGENDA. Choropleth tanpa legenda menuntut pembacanya menebak arah
+          skalanya, dan tebakan itu sering terbalik. */}
+      <div className="adm-legend">
+        <span className="adm-legend-chip" style={{ background: EMPTY }} aria-hidden="true" />
+        <span>Belum ada</span>
+        <span
+          className="adm-legend-ramp"
+          style={{ background: `linear-gradient(90deg, ${LOW}, ${HIGH})` }}
+          aria-hidden="true"
+        />
+        <span>Sedikit ke banyak</span>
+      </div>
+
       {undrawable.length > 0 ? (
         <p className="adm-hint">
           Terlalu kecil untuk digambar di peta, lihat daftar di bawah:{" "}

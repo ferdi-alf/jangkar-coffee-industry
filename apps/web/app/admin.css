@@ -876,6 +876,28 @@
 }
 .adm-choropleth .adm-hint { margin: 0; }
 
+/* Legenda skala warna peta. */
+.adm-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  color: var(--a-text-2);
+}
+.adm-legend-chip {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--a-line-strong);
+}
+.adm-legend-ramp {
+  width: 56px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--a-line-strong);
+}
+
 .adm-geo-list {
   flex: none;
   margin: 0;

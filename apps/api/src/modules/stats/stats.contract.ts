@@ -29,6 +29,20 @@ export interface StatsOverview {
    * MUAT HALAMAN, bukan manusia. Bot yang menyamar sebagai peramban tetap ikut
    * terhitung, dan kunjungan dari lokal tidak punya negara sama sekali.
    */
+  /**
+   * Apakah pencatat kunjungan BENAR-BENAR menyala.
+   *
+   * Tanpa `TRACK_SECRET`, endpoint /track/visit menolak semuanya dan middleware
+   * situs tidak mengirim apa pun. Itu memang disengaja, gagal tertutup bukan
+   * gagal terbuka. MASALAHNYA ia gagal DIAM-DIAM: dashboard hanya menampilkan
+   * grafik rata nol, dan itu terlihat persis seperti situs yang belum
+   * dikunjungi siapa pun. Pemilik tidak punya cara membedakan "belum ada
+   * pengunjung" dari "pencatatnya memang belum dinyalakan".
+   *
+   * Medan ini yang membedakannya, dan dashboard menampilkan peringatan yang
+   * bisa ditindaklanjuti kalau nilainya false.
+   */
+  trackingConfigured: boolean;
   visitsByDay: { date: string; visits: number; uniques: number }[];
   /**
    * Kunjungan per negara, 30 hari terakhir, urut terbanyak.

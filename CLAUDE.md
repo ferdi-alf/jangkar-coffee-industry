@@ -432,14 +432,26 @@ datang". Choropleth menjawabnya langsung: negaranya sendiri yang berwarna, dan
 makin banyak kunjungan makin pekat.
 
 Warnanya dari palet crest, bukan skala bawaan pustaka: `#E8C244` (`--red-deep`)
-untuk paling sedikit sampai `#6B2218` (`--signal`) untuk paling banyak. Negara
-tanpa kunjungan abu netral, sengaja bukan versi paling pucat dari rentang itu,
-supaya "nol" tidak pernah salah dibaca sebagai "sedikit". Skalanya AKAR bukan
-linear, karena satu negara yang jauh lebih ramai akan membuat sisanya tampak
-seragam.
+untuk paling sedikit sampai `#6B2218` (`--signal`) untuk paling banyak. Skalanya
+AKAR bukan linear, karena satu negara yang jauh lebih ramai akan membuat sisanya
+tampak seragam.
 
 Leaflet TETAP TERPASANG dan masih dipakai `OutletMap` di situs publik. Jangan
 dicabut dari dependensi.
+
+**SELURUH NEGARA DIWARNAI, termasuk yang belum pernah berkunjung.** Yang nol
+memakai pasir hangat `#EDE6D6`, sengaja DI LUAR rentang kuning ke merah, bukan
+sekadar ujung terpucatnya. Kalau nol memakai warna paling pucat dari rentang
+yang sama, ia terbaca sebagai "sedikit kunjungan", dan itu kebohongan yang
+paling mudah dipercaya. Ada legenda di bawah peta yang menjelaskan arah
+skalanya.
+
+**Grafik kunjungan yang rata nol punya DUA sebab yang terlihat sama**, dan
+membedakannya penting: situs memang belum dikunjungi, atau `TRACK_SECRET` belum
+diisi sehingga pencatatnya mati total. Karena itu `GET /stats/overview`
+mengembalikan `trackingConfigured`, dan dashboard menampilkan peringatan yang
+bisa ditindaklanjuti kalau nilainya false. Jangan hapus medan itu: tanpanya,
+kegagalan konfigurasi terlihat persis seperti situs yang sepi.
 
 **Sekitar 40 negara terlalu kecil untuk digambar pustaka ini**, termasuk
 Singapura dan Hong Kong. Itu bukan bug: pada skala dunia bentuknya memang tidak

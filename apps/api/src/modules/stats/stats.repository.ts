@@ -21,7 +21,11 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function overview(supabase: SupabaseClient): Promise<StatsOverview> {
+/* Mengembalikan seluruh StatsOverview KECUALI `trackingConfigured`, yang
+   diisi service karena ia keadaan konfigurasi, bukan isi basis data. */
+export async function overview(
+  supabase: SupabaseClient,
+): Promise<Omit<StatsOverview, "trackingConfigured">> {
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 29);
 
