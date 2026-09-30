@@ -1096,12 +1096,23 @@ body {
   color: var(--paper);
 }
 .section-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: clamp(20px, 2.4vw, 28px) 0 0;
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0.1em;
   color: var(--ink-300);
+}
+.section-note::before {
+  content: "";
+  flex: none;
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--red);
 }
 .eyebrow-accent {
   color: var(--red-lift);
@@ -1428,12 +1439,22 @@ body {
   background: linear-gradient(180deg, rgba(var(--paper-rgb), 0.045), rgba(var(--paper-rgb), 0.012));
   position: relative;
   overflow: hidden;
-  transition: border-color 320ms var(--e);
+  transition:
+    border-color 320ms var(--e),
+    box-shadow 420ms var(--e);
 }
+/* Bayangan hover disamakan dengan kartu produk Roastery, supaya kedua
+   keluarga kartu di halaman yang sama bereaksi dengan cara yang sama. */
 .menu-card:hover {
   border-color: var(--red);
+  box-shadow: 0 26px 54px -34px var(--shadow);
 }
+/* Garis hairline setelah judul kategori mengisi sisa lebar kartu, jadi judul
+   pendek seperti "Snacks" tidak lagi tampak menggantung sendirian. */
 .menu-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0 0 clamp(14px, 1.8vw, 20px);
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.72rem;
@@ -1441,6 +1462,12 @@ body {
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--red-lift);
+}
+.menu-card-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--ink-500), transparent);
 }
 .menu-list {
   margin: 0;
@@ -1837,19 +1864,34 @@ body {
 
 /* ── blok heritage ─────────────────────────────────────────────────────── */
 .heritage {
+  position: relative;
   margin-top: clamp(28px, 3.4vw, 44px);
-  padding: clamp(20px, 2.4vw, 28px);
-  border-radius: 16px;
+  padding: clamp(20px, 2.6vw, 30px) clamp(20px, 3vw, 36px);
+  border-radius: 18px;
+  overflow: hidden;
   border: 1px solid var(--ink-600);
-  background: var(--ink-850);
+  background:
+    radial-gradient(70% 140% at 0% 50%, rgba(var(--red-rgb), 0.13), transparent 62%),
+    var(--ink-850);
   display: flex;
   align-items: center;
-  gap: clamp(16px, 2vw, 26px);
+  gap: clamp(16px, 2.4vw, 30px);
+}
+/* Aksen tegak di tepi kiri, bahasa yang sama dengan garis atas kartu produk. */
+.heritage::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18px;
+  bottom: 18px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--red);
 }
 .heritage-mark {
   flex: none;
-  width: 46px;
-  height: 46px;
+  width: clamp(46px, 5vw, 60px);
+  height: clamp(46px, 5vw, 60px);
   background-color: var(--red-lift);
   -webkit-mask: url("/brand/jangkar-mark.webp") center / contain no-repeat;
   mask: url("/brand/jangkar-mark.webp") center / contain no-repeat;
@@ -1858,12 +1900,18 @@ body {
   margin: 0;
   font-size: 0.92rem;
   font-weight: 400;
-  line-height: 1.65;
+  line-height: 1.6;
   color: var(--ink-200);
 }
+/* Judul di baris sendiri, jadi blok ini terbaca sebagai tanda tangan merek,
+   bukan satu kalimat panjang yang kebetulan tebal di depannya. */
 .heritage-body strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: clamp(1.02rem, 1.5vw, 1.2rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
   color: var(--paper);
-  font-weight: 600;
 }
 
 /* ── outlet, satu titik tetap plus peta ────────────────────────────────── */
