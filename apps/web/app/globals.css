@@ -1523,48 +1523,155 @@ body {
   color: var(--red-lift);
 }
 
-/* ── kartu produk roastery ─────────────────────────────────────────────── */
+/* ── kartu produk roastery ─────────────────────────────────────────────────
+   FLEX-WRAP, BUKAN GRID, dan alasannya kartu yatim. Grid menaruh sisa baris
+   terakhir menempel kiri; flex dengan justify-content center memusatkannya.
+   Jumlah kolom di layar lebar datang dari `--cols` yang dihitung
+   RoasterySection dari jumlah produk, jadi empat produk tampil empat sejajar
+   dan tidak lagi tiga di atas satu di bawah.
+
+     < 560px      satu kolom
+     560–1079px   dua kolom, empat produk jadi 2×2
+     ≥ 1080px     --cols */
 .product-grid {
+  --gap: clamp(12px, 1.6vw, 20px);
+  --per-row: 1;
   margin: clamp(36px, 5vw, 60px) 0 0;
   padding: 0;
   list-style: none;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--gap);
 }
-@media (min-width: 720px) {
+@media (min-width: 560px) {
   .product-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    --per-row: 2;
   }
+}
+@media (min-width: 1080px) {
+  .product-grid {
+    --per-row: var(--cols, 3);
+  }
+}
+.product-grid > .product-card {
+  flex: 0 0 calc((100% - (var(--per-row) - 1) * var(--gap)) / var(--per-row));
+  min-width: 0;
 }
 .product-card {
   position: relative;
-  padding: 16px;
-  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: 20px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(var(--paper-rgb), 0.045), rgba(var(--paper-rgb), 0.014));
+  isolation: isolate;
+  container-type: inline-size;
+  background: var(--ink-700);
   border: 1px solid var(--ink-600);
+  box-shadow: 0 1px 0 rgba(var(--paper-rgb), 0.03);
+}
+/* Spesifisitasnya sengaja setara `[data-reveal].reveal-armed` dan ditulis
+   SESUDAHNYA. Kalau lebih rendah, transition milik reveal menimpa seluruh
+   daftar ini dan border serta bayangan hover berubah tanpa transisi. Jeda
+   bertahap per kartu hanya untuk kemunculan, hover selalu tanpa jeda. */
+.product-grid .product-card {
   transition:
+    opacity 0.72s var(--e),
+    transform 0.72s var(--e),
     border-color 320ms var(--e),
     box-shadow 420ms var(--e);
+  transition-delay: calc(var(--i, 0) * 80ms), calc(var(--i, 0) * 80ms), 0s, 0s;
 }
-.product-card:hover {
+/* Sorot kursor dari RevealRoot, yang menulis --mx dan --my. Tanpa mouse ia
+   tidak pernah muncul, dan memang tidak membawa informasi apa pun. */
+.product-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 0%),
+    rgba(var(--red-rgb), 0.12),
+    transparent 70%
+  );
+  transition: opacity 320ms var(--e);
+}
+/* Garis aksen di tepi atas, tumbuh dari tengah. */
+.product-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 18px;
+  right: 18px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--red);
+  transform: scaleX(0);
+  transition: transform 420ms var(--e);
+  z-index: 2;
+}
+/* :focus-within ikut, supaya pengguna keyboard yang menabrak tombol
+   marketplace mendapat umpan balik yang sama dengan pengguna mouse. */
+.product-card:hover,
+.product-card:focus-within {
   border-color: var(--red);
-  box-shadow: 0 22px 50px -28px var(--shadow);
+  box-shadow: 0 26px 54px -30px var(--shadow);
 }
+.product-card:hover::after {
+  opacity: 1;
+}
+.product-card:hover::before,
+.product-card:focus-within::before {
+  transform: scaleX(1);
+}
+/* Persegi di ponsel dan tablet, sedikit lebih tinggi hanya saat kartunya
+   ramping di barisan empat. Rasio 4:5 di kartu selebar setengah layar tablet
+   membuat satu gambar hampir memenuhi tinggi layar. */
 .product-media {
   position: relative;
   aspect-ratio: 1 / 1;
-  margin-bottom: 16px;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  background: var(--ink-850);
+  background:
+    radial-gradient(90% 70% at 50% 100%, rgba(var(--red-rgb), 0.16), transparent 70%),
+    var(--ink-850);
 }
 .product-media img {
   object-fit: cover;
+  transition: transform 720ms var(--e);
+}
+.product-card:hover .product-media img {
+  transform: scale(1.045);
+}
+.product-index {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(var(--ink-900-rgb), 0.86);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--paper);
+}
+.product-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 8px 8px;
 }
 .product-sku {
-  display: block;
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--ink-850);
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.6rem;
   font-weight: 600;
@@ -1572,18 +1679,49 @@ body {
   color: var(--ink-300);
 }
 .product-name {
-  margin: 8px 0 0;
-  font-size: clamp(0.98rem, 1.4vw, 1.12rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  margin: 12px 0 0;
+  font-size: clamp(1rem, 1.3vw, 1.14rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
   color: var(--paper);
+  text-wrap: balance;
+}
+/* margin-top auto mendorong harga dan tombol ke dasar kartu, jadi kaki semua
+   kartu sebaris tetap rata walau panjang nama produknya berbeda. */
+.product-foot {
+  margin-top: auto;
+  padding-top: 18px;
 }
 .product-price {
   display: block;
-  margin-top: 6px;
-  font-size: 0.95rem;
-  font-weight: 700;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--ink-600);
+  font-size: clamp(1.15rem, 1.6vw, 1.3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
   color: var(--paper);
+}
+.product-foot .mk-row {
+  margin-top: 12px;
+}
+/* Keterangan "tautan belum tersedia" hanya muncul di sebagian kartu. Kartu
+   tanpa keterangan menyisakan ruang setinggi keterangan itu (8px + 16px),
+   jadi tombol di semua kartu sebaris tetap berada pada ketinggian yang sama. */
+.product-foot .mk-note {
+  line-height: 16px;
+}
+.product-foot:not(:has(.mk-note)) {
+  padding-bottom: 24px;
+}
+/* Kartu sempit, entah di empat kolom pada layar 1080px atau di mana pun,
+   menumpuk kedua tombol supaya label Tokopedia tidak terjepit. Aturan
+   `< 420px` di bawah tetap berlaku untuk ponsel. */
+@container (max-width: 250px) {
+  .mk-row {
+    flex-direction: column;
+  }
 }
 
 /* ── tombol marketplace di kaki kartu ──────────────────────────────────────

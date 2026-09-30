@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Image from "next/image";
 
 import { MarketplaceButtons } from "@/components/ui/marketplace-buttons";
@@ -8,8 +9,11 @@ import { getEcommerceProducts } from "@/modules/home/lib/ecommerce-products";
 /**
  * Seksi 4, Roastery. Kopi kemasan sebagai lini bisnis, bukan suvenir.
  *
- * TIGA produk, bukan empat. Menu Roastery Corner memuat empat SKU, tapi yang
- * dijual di Shopee dan Tokopedia hanya tiga ini.
+ * JUMLAH PRODUKNYA TIDAK TETAP. Dulu tiga dan grid-nya dikunci tiga kolom,
+ * lalu produksi menambah yang keempat dan hasilnya tiga kartu di atas plus satu
+ * kartu yatim di bawah. Sekarang jumlah kolom dihitung dari jumlah produk lewat
+ * `balancedColumns`, dan baris terakhir yang tidak penuh dipusatkan oleh CSS,
+ * jadi menambah atau mengurangi produk di panel tidak pernah butuh kode lagi.
  *
  * Gambar di sini di bawah lipatan, jadi dibiarkan lazy, tidak diberi `priority`.
  * Hanya foto ranting di hero yang boleh merebut bandwidth awal.
@@ -22,6 +26,7 @@ import { getEcommerceProducts } from "@/modules/home/lib/ecommerce-products";
  */
 export async function RoasterySection({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const products = await getEcommerceProducts(locale);
+  const total = String(products.length).padStart(2, "0");
 
   return (
     <section className="section" id="roastery">
@@ -34,21 +39,41 @@ export async function RoasterySection({ dict, locale }: { dict: Dictionary; loca
         {dict.roastery.heading.line2}
       </h2>
 
-      <ul className="product-grid">
-        {products.map((product) => (
-          <li className="product-card" data-reveal data-spot key={product.sku}>
+      <ul
+        className="product-grid"
+        style={{ "--cols": balancedColumns(products.length) } as CSSProperties}
+      >
+        {products.map((product, index) => (
+          <li
+            className="product-card"
+            data-reveal
+            data-spot
+            key={product.sku}
+            style={{ "--i": index } as CSSProperties}
+          >
             <div className="product-media">
               <Image
                 src={product.image}
                 alt={`${product.name}, ${dict.roastery.eyebrow}`}
                 fill
-                sizes="(max-width: 719px) 92vw, (max-width: 1039px) 46vw, 30vw"
+                sizes="(max-width: 559px) 92vw, (max-width: 1079px) 46vw, 24vw"
               />
+              <span className="product-index" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")} / {total}
+              </span>
             </div>
-            <span className="product-sku">{product.sku}</span>
-            <h3 className="product-name">{product.name}</h3>
-            <span className="product-price">{product.price}</span>
-            <MarketplaceButtons product={product} dict={dict} />
+            <div className="product-body">
+              <span className="product-sku">{product.sku}</span>
+              <h3 className="product-name">{product.name}</h3>
+              <div className="product-foot">
+                {/* Baris harga SELALU dirender, kosong sekalipun, supaya tombol
+                    kartu tanpa harga tetap sejajar dengan kartu di sebelahnya. */}
+                <span className="product-price" aria-hidden={product.price ? undefined : true}>
+                  {product.price || " "}
+                </span>
+                <MarketplaceButtons product={product} dict={dict} />
+              </div>
+            </div>
           </li>
         ))}
       </ul>
@@ -65,4 +90,16 @@ export async function RoasterySection({ dict, locale }: { dict: Dictionary; loca
       </div>
     </section>
   );
+}
+
+/**
+ * Jumlah kolom di layar lebar yang meninggalkan kartu yatim sesedikit mungkin.
+ * Empat produk jadi empat sejajar, enam jadi tiga-tiga, delapan jadi empat-empat.
+ * Sisa yang tetap ada (misalnya lima) dipusatkan CSS, bukan menempel kiri.
+ */
+function balancedColumns(count: number): number {
+  if (count <= 4) return Math.max(count, 1);
+  if (count % 4 === 0) return 4;
+  if (count % 3 === 0) return 3;
+  return 4;
 }
